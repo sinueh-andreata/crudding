@@ -1,0 +1,10 @@
+import express from "express";
+import { getMessage } from "{{.ServiceImport}}";
+
+const app = express();
+
+app.get("/", (_request, response) => {
+  response.json({ message: getMessage() });
+});
+
+app.listen(3000, () => console.log("Listening on http://localhost:3000"));

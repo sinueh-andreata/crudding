@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{{.ProjectName}}"
+version = "0.1.0"
+description = "Projeto Python gerado pelo crudding"
+requires-python = ">=3.10"
+dependencies = [
+{{if eq .Framework "fastapi"}}
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+{{else if eq .Framework "django"}}
+    "Django>=5.1",
+{{else if eq .Framework "flask"}}
+    "Flask>=3.0",
+{{end}}
+]

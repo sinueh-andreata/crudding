@@ -1,0 +1,14 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+	greeting "{{.GoModule}}/{{.ServiceDir}}"
+)
+
+func main() {
+	router := gin.Default()
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": greeting.Message()})
+	})
+	_ = router.Run(":8080")
+}
