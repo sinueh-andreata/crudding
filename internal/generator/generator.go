@@ -1,28 +1,24 @@
 package generator
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"crudding/internal/project"
-	entryDir    string
-		"crudding/internal/generator/golang"
-		"crudding/internal/generator/node"
-		"crudding/internal/generator/python"
-	directories []string
-}
+	"crudding/internal/generator/golang"
+	"crudding/internal/generator/node"
+	"crudding/internal/generator/python"
+	"crudding/internal/types"
+)
 
-		return fmt.Errorf("runtime Node não suportado: %s", config.Runtime)
-			{"templates/python/base/requirements.txt.tmpl", "requirements.txt"},
-			{"templates/python/base/.gitignore.tmpl", ".gitignore"},
-			return python.Generate(destination, config, templates)
-			{"templates/go/base/greeting.go.tmpl", filepath.ToSlash(filepath.Join(selectedLayout.serviceDir, "greeting.go"))},
-			return golang.Generate(destination, config, templates)
-		data.ServiceImport = filepath.ToSlash(serviceImport)
-			return node.Generate(destination, config, templates)
+func Generate(destination string, config types.ProjectConfig, templates fs.FS) error {
 	switch config.Language {
-			return fmt.Errorf("linguagem não suportada: %s", config.Language)
+	case "python":
+		return python.Generate(destination, config, templates)
+	case "go":
+		return golang.Generate(destination, config, templates)
+	case "node":
+		return node.Generate(destination, config, templates)
+	default:
+		return fmt.Errorf("linguagem não suportada: %s", config.Language)
+	}
+}
