@@ -1,0 +1,50 @@
+# {{.ProjectName}} (Flat Architecture)
+
+Projeto Go estruturado utilizando a **Flat Architecture** (Arquitetura Plana).
+
+---
+
+## 🏛️ O que é a Flat Architecture?
+
+A **Flat Architecture** é o padrão mais simples e direto no ecossistema Go. Em vez de criar múltiplos subpacotes prematuramente (como `controllers/`, `services/`, etc.), todo o código da aplicação reside no pacote `main` (ou em um único pacote de raiz).
+
+### Princípios Chave:
+1. **Sem Indireções Desnecessárias**: Todos os tipos, funções e testes estão no mesmo nível de visibilidade dentro do pacote `main`.
+2. **KISS (Keep It Simple, Stupid)**: Ideal para ferramentas CLI, scripts, microsserviços utilitários e projetos em estágio inicial (MVPs).
+3. **Evolução Natural**: Conforme o projeto cresce e domínios independentes emergem, arquivos específicos podem ser extraídos para pastas sob `internal/`.
+
+---
+
+## 📁 Estrutura de Arquivos
+
+```text
+{{.ProjectName}}/
+├── go.mod          # Definição do módulo Go
+├── go.sum          # Checksums de dependências
+├── main.go         # Ponto de entrada e configuração do servidor HTTP ({{.Framework}})
+├── parse.go        # Lógica de parsing, validação e modelos locais
+├── parse_test.go   # Testes unitários do parser
+├── report.go       # Lógica de formatação e geração de relatórios
+├── .gitignore      # Arquivos ignorados pelo Git
+└── README.md       # Documentação da arquitetura
+```
+
+---
+
+## 🚀 Como Executar
+
+### 1. Baixar dependências
+```sh
+go mod tidy
+```
+
+### 2. Executar a aplicação
+```sh
+go run .
+```
+
+### 3. Executar os testes
+```sh
+go test -v ./...
+```
+

@@ -1,0 +1,12 @@
+package domain
+
+import "time"
+
+// Order é a entidade de domínio central.
+type Order struct {
+	ID        string    `json:"id"`
+	Item      string    `json:"item"`
+	Amount    float64   `json:"amount"`
+	CreatedAt time.Time `json:"created_at"`
+}
+

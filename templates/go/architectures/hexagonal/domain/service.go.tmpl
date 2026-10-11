@@ -1,0 +1,19 @@
+package domain
+
+import "{{.GoModule}}/internal/ports"
+
+// Service implementa a lógica do core domain e satisfaz a porta ports.ProductService.
+type Service struct {
+	repo ports.ProductRepository
+}
+
+// NewService instancia o serviço injetando o repositório contratado via porta.
+func NewService(repo ports.ProductRepository) *Service {
+	return &Service{repo: repo}
+}
+
+// ListProducts obtém os produtos através da Driven Port do repositório.
+func (s *Service) ListProducts() ([]Product, error) {
+	return s.repo.FindAll()
+}
+

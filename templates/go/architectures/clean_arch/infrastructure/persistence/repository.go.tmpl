@@ -1,0 +1,42 @@
+package persistence
+
+import (
+	"sync"
+	"time"
+
+	"{{.GoModule}}/internal/domain"
+)
+
+// InMemoryOrderRepository implementa a porta ports.OrderRepository.
+type InMemoryOrderRepository struct {
+	mu     sync.RWMutex
+	orders []domain.Order
+}
+
+// New cria o repositório em memória com dados iniciais.
+func New() *InMemoryOrderRepository {
+	return &InMemoryOrderRepository{
+		orders: []domain.Order{
+			{ID: "ord-1", Item: "Clean Architecture Book", Amount: 120.00, CreatedAt: time.Now()},
+			{ID: "ord-2", Item: "Domain-Driven Design Book", Amount: 145.00, CreatedAt: time.Now()},
+		},
+	}
+}
+
+// Save persiste um pedido.
+func (r *InMemoryOrderRepository) Save(order *domain.Order) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.orders = append(r.orders, *order)
+	return nil
+}
+
+// FindAll retorna a lista de pedidos.
+func (r *InMemoryOrderRepository) FindAll() ([]domain.Order, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	copied := make([]domain.Order, len(r.orders))
+	copy(copied, r.orders)
+	return copied, nil
+}
+

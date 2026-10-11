@@ -1,0 +1,18 @@
+package application
+
+import "time"
+
+// CreateOrderInput define os parâmetros necessários para criação de um pedido.
+type CreateOrderInput struct {
+	Item   string  `json:"item"`
+	Amount float64 `json:"amount"`
+}
+
+// OrderOutput representa o retorno estruturado de um pedido processado.
+type OrderOutput struct {
+	ID        string    `json:"id"`
+	Item      string    `json:"item"`
+	Amount    float64   `json:"amount"`
+	CreatedAt time.Time `json:"created_at"`
+}
+

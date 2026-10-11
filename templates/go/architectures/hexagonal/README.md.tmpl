@@ -1,0 +1,88 @@
+# {{.ProjectName}} (Hexagonal Architecture / Ports & Adapters)
+
+Projeto Go estruturado utilizando a **Hexagonal Architecture** (Portas e Adaptadores), proposta por Alistair Cockburn.
+
+---
+
+## 🏛️ O que é a Hexagonal Architecture?
+
+A **Hexagonal Architecture** isola as regras fundamentais de negócio do mundo exterior (bancos de dados, frameworks web, protocolos de rede, filas) através de **Portas** e **Adaptadores**:
+
+```text
+       [ Driving Adapter: HTTP/REST ] ───► ( Driving Port: ProductService )
+                                                          │
+                                                          ▼
+                                                  [ DOMAIN (Core) ]
+                                                          │
+                                                          ▼
+       [ Driven Adapter: Postgres ]   ◄─── ( Driven Port: ProductRepository )
+```
+
+### Princípios Chave:
+1. **Domínio Puro (`internal/domain`)**:
+   - Contém as entidades e a lógica pura de negócio. O domínio não importa drivers SQL, pacotes HTTP ou qualquer biblioteca de infraestrutura.
+2. **Portas (`internal/ports`)**:
+   - **Driving Ports (Primárias)**: Contratos que definem como agentes externos podem interagir com a aplicação (ex: `ProductService`).
+   - **Driven Ports (Secundárias)**: Contratos que definem as necessidades de infraestrutura da aplicação (ex: `ProductRepository`).
+3. **Adaptadores (`internal/adapters`)**:
+   - **Primários / Driving**: Convertem estímulos externos em chamadas para o domínio (ex: `adapters/http` e `adapters/grpc`).
+   - **Secundários / Driven**: Implementam as interfaces de persistência ou clientes externos (ex: `adapters/postgres`).
+4. **Múltiplos Entrypoints (`cmd/`)**:
+   - `cmd/rest/main.go`: Inicializa os adaptadores HTTP/REST utilizando {{.Framework}}.
+   - `cmd/grpc/main.go`: Inicializa os adaptadores gRPC compartilhando o mesmo núcleo de domínio.
+
+---
+
+## 📁 Estrutura de Diretórios
+
+```text
+{{.ProjectName}}/
+├── cmd/
+│   ├── rest/
+│   │   └── main.go              # Ponto de entrada REST ({{.Framework}})
+│   └── grpc/
+│       └── main.go              # Ponto de entrada gRPC
+├── internal/
+│   ├── domain/                  # Núcleo de regras de negócio puras
+│   │   ├── product.go           # Entidade de produto
+│   │   └── service.go           # Implementação do serviço de domínio
+│   ├── ports/                   # Contratos (interfaces Go)
+│   │   ├── repository.go        # Driven Port (ProductRepository)
+│   │   └── service.go           # Driving Port (ProductService)
+│   └── adapters/                # Implementações concretas de tecnologia
+│       ├── http/                # Adaptador primário HTTP (Driving)
+│       │   └── handler.go
+│       ├── grpc/                # Adaptador primário gRPC (Driving)
+│       │   └── server.go
+│       └── postgres/            # Adaptador secundário PostgreSQL (Driven)
+│           └── repository.go
+├── go.mod                       # Módulo Go
+├── go.sum                       # Checksums de dependências
+├── .gitignore                   # Arquivos ignorados pelo Git
+└── README.md                    # Documentação da arquitetura
+```
+
+---
+
+## 🚀 Como Executar
+
+### 1. Baixar dependências
+```sh
+go mod tidy
+```
+
+### 2. Executar o servidor REST
+```sh
+go run ./cmd/rest
+```
+
+### 3. Executar o servidor gRPC
+```sh
+go run ./cmd/grpc
+```
+
+### 4. Executar os testes
+```sh
+go test -v ./...
+```
+

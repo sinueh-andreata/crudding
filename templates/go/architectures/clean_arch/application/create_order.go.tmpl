@@ -1,0 +1,54 @@
+package application
+
+import (
+	"fmt"
+	"time"
+
+	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+	"{{.GoModule}}/pkg/validator"
+)
+
+// CreateOrderUseCase executa o caso de uso de criação e consulta de pedidos.
+type CreateOrderUseCase struct {
+	repo ports.OrderRepository
+}
+
+// NewCreateOrderUseCase instancia o caso de uso com a porta do repositório.
+func NewCreateOrderUseCase(repo ports.OrderRepository) *CreateOrderUseCase {
+	return &CreateOrderUseCase{repo: repo}
+}
+
+// Execute valida e persiste um novo pedido.
+func (uc *CreateOrderUseCase) Execute(input CreateOrderInput) (*OrderOutput, error) {
+	if !validator.IsPositive(input.Amount) {
+		return nil, domain.ErrInvalidAmount
+	}
+	if !validator.NotEmpty(input.Item) {
+		return nil, domain.ErrEmptyItem
+	}
+
+	order := &domain.Order{
+		ID:        fmt.Sprintf("ord-%d", time.Now().UnixNano()),
+		Item:      input.Item,
+		Amount:    input.Amount,
+		CreatedAt: time.Now(),
+	}
+
+	if err := uc.repo.Save(order); err != nil {
+		return nil, err
+	}
+
+	return &OrderOutput{
+		ID:        order.ID,
+		Item:      order.Item,
+		Amount:    order.Amount,
+		CreatedAt: order.CreatedAt,
+	}, nil
+}
+
+// ListOrders retorna todos os pedidos através da porta.
+func (uc *CreateOrderUseCase) ListOrders() ([]domain.Order, error) {
+	return uc.repo.FindAll()
+}
+

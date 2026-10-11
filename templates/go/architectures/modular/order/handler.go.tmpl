@@ -1,0 +1,17 @@
+package order
+
+// Handler manipula requisições de transporte relacionadas a pedidos.
+type Handler struct {
+	service *Service
+}
+
+// NewHandler constrói o handler injetando o serviço do módulo.
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
+}
+
+// Orders retorna os pedidos para o consumidor da API.
+func (h *Handler) Orders() []Order {
+	return h.service.GetOrders()
+}
+

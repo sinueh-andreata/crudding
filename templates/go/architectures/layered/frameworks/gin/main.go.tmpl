@@ -1,0 +1,27 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/repositories"
+	"{{.GoModule}}/internal/services"
+)
+
+func main() {
+	repo := repositories.NewItemRepository()
+	service := services.NewItemService(repo)
+	handler := handlers.NewItemHandler(service)
+
+	router := gin.Default()
+
+	router.GET("/items", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Hello from Layered Architecture (Gin)",
+			"items":   handler.GetItems(),
+		})
+	})
+
+	_ = router.Run(":8080")
+}
+

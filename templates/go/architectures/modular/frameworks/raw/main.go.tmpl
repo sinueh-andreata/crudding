@@ -1,0 +1,42 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"{{.GoModule}}/internal/order"
+	"{{.GoModule}}/internal/platform/database"
+	"{{.GoModule}}/internal/user"
+)
+
+func main() {
+	_ = database.Connect()
+
+	orderRepo := order.NewRepository()
+	orderService := order.NewService(orderRepo)
+	orderHandler := order.NewHandler(orderService)
+
+	userRepo := user.NewRepository()
+	userHandler := user.NewHandler(userRepo)
+
+	http.HandleFunc("/orders", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"module": "order",
+			"orders": orderHandler.Orders(),
+		})
+	})
+
+	http.HandleFunc("/users", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"module": "user",
+			"users":  userHandler.Users(),
+		})
+	})
+
+	log.Println("API Modular rodando em http://localhost:8080 (/orders, /users)")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+

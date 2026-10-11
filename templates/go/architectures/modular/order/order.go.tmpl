@@ -1,0 +1,13 @@
+package order
+
+import "time"
+
+// Order representa a entidade central do módulo de pedidos.
+type Order struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	Total     float64   `json:"total"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+

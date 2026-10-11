@@ -1,0 +1,22 @@
+package http
+
+import (
+	"{{.GoModule}}/internal/application"
+	"{{.GoModule}}/internal/domain"
+)
+
+// OrderHandler gerencia os endpoints HTTP de pedidos.
+type OrderHandler struct {
+	useCase *application.CreateOrderUseCase
+}
+
+// NewOrderHandler cria o handler injetando o caso de uso.
+func NewOrderHandler(useCase *application.CreateOrderUseCase) *OrderHandler {
+	return &OrderHandler{useCase: useCase}
+}
+
+// ListOrders retorna a lista de pedidos obtida via caso de uso.
+func (h *OrderHandler) ListOrders() ([]domain.Order, error) {
+	return h.useCase.ListOrders()
+}
+

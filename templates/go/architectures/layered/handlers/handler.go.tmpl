@@ -1,0 +1,22 @@
+package handlers
+
+import (
+	"{{.GoModule}}/internal/models"
+	"{{.GoModule}}/internal/services"
+)
+
+// ItemHandler gerencia o ciclo de requisição e resposta para itens.
+type ItemHandler struct {
+	service *services.ItemService
+}
+
+// NewItemHandler cria um novo handler com o serviço injetado.
+func NewItemHandler(service *services.ItemService) *ItemHandler {
+	return &ItemHandler{service: service}
+}
+
+// GetItems obtém a listagem tratada da camada de serviço.
+func (h *ItemHandler) GetItems() []models.Item {
+	return h.service.ListItems()
+}
+

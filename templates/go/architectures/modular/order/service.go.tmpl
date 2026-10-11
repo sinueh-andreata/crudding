@@ -1,0 +1,17 @@
+package order
+
+// Service implementa os casos de uso do módulo de pedidos.
+type Service struct {
+	repo *Repository
+}
+
+// NewService cria uma instância do serviço de pedidos.
+func NewService(repo *Repository) *Service {
+	return &Service{repo: repo}
+}
+
+// GetOrders retorna os pedidos processados.
+func (s *Service) GetOrders() []Order {
+	return s.repo.List()
+}
+

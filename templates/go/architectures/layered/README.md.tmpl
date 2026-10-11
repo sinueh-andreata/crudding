@@ -1,0 +1,59 @@
+# {{.ProjectName}} (Layered Architecture)
+
+Projeto Go estruturado utilizando a **Layered Architecture** (Arquitetura em Camadas).
+
+---
+
+## 🏛️ O que é a Layered Architecture?
+
+A **Layered Architecture** organiza o sistema em camadas horizontais bem delineadas, com fluxo unidirecional de dependências:
+
+$$\text{Handlers (Transporte)} \longrightarrow \text{Services (Negócio)} \longrightarrow \text{Repositories (Dados)} \longrightarrow \text{Models (Estruturas)}$$
+
+### Princípios Chave:
+1. **Separação de Preocupações**:
+   - Cada camada tem uma responsabilidade estrita. O handler não executa consultas SQL, e o repositório não processa requisições HTTP.
+2. **Encapsulamento com `internal/`**:
+   - No Go, qualquer pacote dentro do diretório `internal/` não pode ser importado por outros módulos externos, garantindo privacidade arquitetural.
+3. **Ponto de Entrada Isolado (`cmd/api`)**:
+   - O arquivo `cmd/api/main.go` atua como o *Composition Root*, instanciando dependências de baixo para cima e injetando-as.
+
+---
+
+## 📁 Estrutura de Diretórios
+
+```text
+{{.ProjectName}}/
+├── cmd/
+│   └── api/
+│       └── main.go           # Ponto de entrada REST ({{.Framework}})
+├── internal/
+│   ├── handlers/             # Lógica de transporte HTTP / Controladores
+│   ├── services/             # Regras de negócio da aplicação
+│   ├── repositories/         # Acesso a dados e persistência
+│   └── models/               # Estruturas de dados compartilhadas
+├── go.mod                    # Módulo Go
+├── go.sum                    # Checksums de dependências
+├── .gitignore                # Arquivos ignorados pelo Git
+└── README.md                 # Documentação da arquitetura
+```
+
+---
+
+## 🚀 Como Executar
+
+### 1. Baixar dependências
+```sh
+go mod tidy
+```
+
+### 2. Executar a API
+```sh
+go run ./cmd/api
+```
+
+### 3. Executar os testes
+```sh
+go test -v ./...
+```
+

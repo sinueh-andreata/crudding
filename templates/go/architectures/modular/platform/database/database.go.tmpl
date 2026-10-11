@@ -1,0 +1,15 @@
+package database
+
+import "log"
+
+// Connection simula a conexão e pooling com o banco de dados.
+type Connection struct {
+	DSN string
+}
+
+// Connect inicializa os recursos de banco de dados.
+func Connect() *Connection {
+	log.Println("[Platform/Database] Conexão com banco de dados estabelecida")
+	return &Connection{DSN: "sqlite::memory:"}
+}
+

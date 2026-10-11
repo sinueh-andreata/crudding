@@ -1,0 +1,22 @@
+package http
+
+import (
+	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/ports"
+)
+
+// Handler é o Driving Adapter primário que consome a porta ports.ProductService.
+type Handler struct {
+	service ports.ProductService
+}
+
+// NewHandler constrói o adaptador HTTP injetando o serviço.
+func NewHandler(service ports.ProductService) *Handler {
+	return &Handler{service: service}
+}
+
+// GetProducts recupera os produtos através da porta do serviço.
+func (h *Handler) GetProducts() ([]domain.Product, error) {
+	return h.service.ListProducts()
+}
+

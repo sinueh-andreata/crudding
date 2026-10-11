@@ -1,0 +1,18 @@
+package main
+
+import "fmt"
+
+// Report representa um relatório gerado pela aplicação.
+type Report struct {
+	Title   string `json:"title"`
+	Summary string `json:"summary"`
+}
+
+// GenerateReport cria um relatório a partir de um Item processado.
+func GenerateReport(item *Item) Report {
+	return Report{
+		Title:   fmt.Sprintf("Relatório: %s", item.Name),
+		Summary: fmt.Sprintf("Processado com valor calculado %d", item.Value),
+	}
+}
+

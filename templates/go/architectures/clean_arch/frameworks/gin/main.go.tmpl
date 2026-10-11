@@ -1,0 +1,37 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+
+	"{{.GoModule}}/internal/application"
+	infraHttp "{{.GoModule}}/internal/infrastructure/http"
+	"{{.GoModule}}/internal/infrastructure/messaging"
+	"{{.GoModule}}/internal/infrastructure/persistence"
+)
+
+func main() {
+	repo := persistence.New()
+	producer := messaging.NewProducer()
+	useCase := application.NewCreateOrderUseCase(repo)
+	handler := infraHttp.NewOrderHandler(useCase)
+
+	producer.Publish("system.boot", "API iniciada com sucesso")
+
+	router := gin.Default()
+
+	router.GET("/orders", func(c *gin.Context) {
+		orders, err := handler.ListOrders()
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"architecture": "Clean Architecture (Gin)",
+			"orders":       orders,
+		})
+	})
+
+	_ = router.Run(":8080")
+}
+

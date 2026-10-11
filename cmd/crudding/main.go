@@ -30,7 +30,7 @@ func run() error {
 	if err != nil || !confirmed {
 		return err
 	}
-	architecture, confirmed, err := models.ChooseOption("escolha a arquitetura", []string{"monorepo", "camadas", "clean arch", "hexagonal", "4horse"})
+	architecture, confirmed, err := models.ChooseOption("escolha a arquitetura", architectureOptionsFor(language))
 	if err != nil || !confirmed {
 		return err
 	}
@@ -74,6 +74,15 @@ func frameworkOptionsFor(language string) []string {
 		return []string{"raw", "express", "nest", "fastify"}
 	default:
 		return nil
+	}
+}
+
+func architectureOptionsFor(language string) []string {
+	switch language {
+	case "go":
+		return []string{"flat", "layered", "modular", "hexagonal", "clean arch"}
+	default:
+		return []string{"monorepo", "camadas", "clean arch", "hexagonal", "4horse"}
 	}
 }
 

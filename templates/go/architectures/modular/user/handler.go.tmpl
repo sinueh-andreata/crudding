@@ -1,0 +1,17 @@
+package user
+
+// Handler provê o ponto de integração HTTP para usuários.
+type Handler struct {
+	repo *Repository
+}
+
+// NewHandler cria uma nova instância do handler de usuário.
+func NewHandler(repo *Repository) *Handler {
+	return &Handler{repo: repo}
+}
+
+// Users retorna a listagem de usuários.
+func (h *Handler) Users() []User {
+	return h.repo.List()
+}
+

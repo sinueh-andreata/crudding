@@ -1,0 +1,39 @@
+package main
+
+import (
+	"github.com/gofiber/fiber/v2"
+
+	"{{.GoModule}}/internal/order"
+	"{{.GoModule}}/internal/platform/database"
+	"{{.GoModule}}/internal/user"
+)
+
+func main() {
+	_ = database.Connect()
+
+	orderRepo := order.NewRepository()
+	orderService := order.NewService(orderRepo)
+	orderHandler := order.NewHandler(orderService)
+
+	userRepo := user.NewRepository()
+	userHandler := user.NewHandler(userRepo)
+
+	app := fiber.New()
+
+	app.Get("/orders", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"module": "order",
+			"orders": orderHandler.Orders(),
+		})
+	})
+
+	app.Get("/users", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"module": "user",
+			"users":  userHandler.Users(),
+		})
+	})
+
+	_ = app.Listen(":8080")
+}
+

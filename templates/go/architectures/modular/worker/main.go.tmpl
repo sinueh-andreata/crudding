@@ -1,0 +1,28 @@
+package main
+
+import (
+	"log"
+	"time"
+
+	"{{.GoModule}}/internal/order"
+	"{{.GoModule}}/internal/platform/database"
+)
+
+func main() {
+	_ = database.Connect()
+	orderRepo := order.NewRepository()
+
+	log.Println("[Worker] Background Worker iniciado...")
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for i := 1; i <= 3; i++ {
+		<-ticker.C
+		orders := orderRepo.List()
+		log.Printf("[Worker] Ciclo %d executado: %d pedidos processados", i, len(orders))
+	}
+
+	log.Println("[Worker] Ciclo de demonstração concluído com sucesso.")
+}
+

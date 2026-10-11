@@ -1,0 +1,10 @@
+package ports
+
+import "{{.GoModule}}/internal/domain"
+
+// OrderRepository define o contrato que a camada de dados deve implementar.
+type OrderRepository interface {
+	Save(order *domain.Order) error
+	FindAll() ([]domain.Order, error)
+}
+

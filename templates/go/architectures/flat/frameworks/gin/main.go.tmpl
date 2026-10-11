@@ -1,0 +1,23 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	router := gin.Default()
+
+	router.GET("/", func(c *gin.Context) {
+		item, _ := ParseInput("crudding flat")
+		report := GenerateReport(item)
+
+		c.JSON(200, gin.H{
+			"message": "Hello from Flat Architecture (Gin)",
+			"item":    item,
+			"report":  report,
+		})
+	})
+
+	_ = router.Run(":8080")
+}
+

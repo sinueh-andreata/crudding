@@ -1,0 +1,17 @@
+package messaging
+
+import "log"
+
+// EventProducer simula um produtor de mensagens (Kafka / RabbitMQ).
+type EventProducer struct{}
+
+// NewProducer inicializa o produtor de eventos de infraestrutura.
+func NewProducer() *EventProducer {
+	return &EventProducer{}
+}
+
+// Publish envia um evento para o broker.
+func (p *EventProducer) Publish(topic string, event any) {
+	log.Printf("[Mensageria/%s] Evento despachado com sucesso: %+v", topic, event)
+}
+

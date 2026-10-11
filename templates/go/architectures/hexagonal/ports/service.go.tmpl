@@ -1,0 +1,9 @@
+package ports
+
+import "{{.GoModule}}/internal/domain"
+
+// ProductService define a Driving Port (porta primária) que expõe as capacidades de negócio.
+type ProductService interface {
+	ListProducts() ([]domain.Product, error)
+}
+

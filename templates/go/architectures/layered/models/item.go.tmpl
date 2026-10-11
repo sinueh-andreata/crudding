@@ -1,0 +1,10 @@
+package models
+
+// Item representa uma entidade compartilhada entre as camadas da aplicação.
+type Item struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Price       float64 `json:"price"`
+}
+

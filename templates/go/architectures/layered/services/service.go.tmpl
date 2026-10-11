@@ -1,0 +1,22 @@
+package services
+
+import (
+	"{{.GoModule}}/internal/models"
+	"{{.GoModule}}/internal/repositories"
+)
+
+// ItemService orquestra a lógica de negócio para manipulação de itens.
+type ItemService struct {
+	repo *repositories.ItemRepository
+}
+
+// NewItemService instancia o serviço injetando o repositório necessário.
+func NewItemService(repo *repositories.ItemRepository) *ItemService {
+	return &ItemService{repo: repo}
+}
+
+// ListItems retorna os itens processados conforme as regras de negócio.
+func (s *ItemService) ListItems() []models.Item {
+	return s.repo.FindAll()
+}
+

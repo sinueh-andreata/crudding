@@ -1,0 +1,9 @@
+package ports
+
+import "{{.GoModule}}/internal/domain"
+
+// ProductRepository define a Driven Port (porta secundária) para persistência.
+type ProductRepository interface {
+	FindAll() ([]domain.Product, error)
+}
+
