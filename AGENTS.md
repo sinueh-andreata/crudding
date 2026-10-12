@@ -16,8 +16,8 @@ Guia de contexto, arquitetura e instruções para agentes de IA atuando no repos
 - **Arquiteturas (Padrões de Pastas)**:
   - **Para Golang**:
     1. `flat`: tudo no pacote `main` (`parse.go`, `parse_test.go`, `report.go`, `main.go`, `README.md`).
-    2. `layered`: separação em camadas sob `internal/` (`handlers`, `services`, `repositories`, `models`) e `cmd/api/main.go`.
-    3. `modular`: *package-by-feature* com módulos (`order`, `user`), plataforma compartilhada (`platform/database`, `platform/auth`) e múltiplos executáveis (`cmd/api`, `cmd/worker`).
+    2. `layered`: separação em camadas sob `internal/` (`router`, `handlers`, `services`, `models`) e `cmd/api/main.go`.
+    3. `modular`: *package-by-feature* com módulos (`order`, `user`), camada centralizadora `internal/router`, plataforma compartilhada (`platform/database`, `platform/auth`) e múltiplos executáveis (`cmd/api`, `cmd/worker`).
     4. `hexagonal`: *Ports & Adapters* com `internal/domain`, `internal/ports`, `internal/adapters` (`http`, `grpc`, `postgres`) e múltiplos entrypoints (`cmd/rest`, `cmd/grpc`).
     5. `clean arch`: Clean Architecture de Uncle Bob com `domain`, `application`, `ports`, `infrastructure` (`persistence`, `http`, `messaging`), utilitários em `pkg/validator` e `migrations/`.
   - **Para Python e Node**:

@@ -1,0 +1,26 @@
+package router
+
+import (
+	"github.com/gin-gonic/gin"
+
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/services"
+)
+
+// Setup registra todas as rotas da aplicação utilizando o framework Gin.
+func Setup() *gin.Engine {
+	r := gin.Default()
+
+	service := services.NewItemService()
+	handler := handlers.NewItemHandler(service)
+
+	r.GET("/items", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Hello from Layered Architecture (Gin)",
+			"items":   handler.GetItems(),
+		})
+	})
+
+	return r
+}
+

@@ -1,29 +1,15 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
-	"{{.GoModule}}/internal/handlers"
-	"{{.GoModule}}/internal/repositories"
-	"{{.GoModule}}/internal/services"
+	"{{.GoModule}}/internal/router"
 )
 
 func main() {
-	repo := repositories.NewItemRepository()
-	service := services.NewItemService(repo)
-	handler := handlers.NewItemHandler(service)
+	r := router.Setup()
 
-	http.HandleFunc("/items", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"message": "Hello from Layered Architecture (Standard net/http)",
-			"items":   handler.GetItems(),
-		})
-	})
-
-	log.Println("API rodando em http://localhost:8080/items")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("API Layered rodando em http://localhost:8080/items")
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
-

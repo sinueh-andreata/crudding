@@ -1,0 +1,28 @@
+package router
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/services"
+)
+
+// Setup registra todas as rotas da aplicação e retorna o multiplexador HTTP.
+func Setup() http.Handler {
+	mux := http.NewServeMux()
+
+	service := services.NewItemService()
+	handler := handlers.NewItemHandler(service)
+
+	mux.HandleFunc("/items", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"message": "Hello from Layered Architecture (Standard net/http)",
+			"items":   handler.GetItems(),
+		})
+	})
+
+	return mux
+}
+

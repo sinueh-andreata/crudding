@@ -6,19 +6,21 @@ Projeto Go estruturado utilizando a **Modular Architecture** (*Package by Featur
 
 ## 🏛️ O que é a Modular Architecture?
 
-A **Modular Architecture** organiza o código em torno de funcionalidades e contextos de domínio (`order`, `user`) em vez de camadas técnicas globais (`handlers`, `services`, `repositories`).
+A **Modular Architecture** organiza o código em torno de funcionalidades e contextos de domínio (`order`, `user`) em vez de camadas técnicas globais.
 
 ### Princípios Chave:
-1. **Alta Coesão Vertical**:
-   - Cada módulo (ex: `internal/order`) encapsula sua própria entidade (`order.go`), endpoints (`handler.go`), casos de uso (`service.go`) e persistência (`repository.go`).
-2. **Baixo Acoplamento**:
+1. **Camada de Router (`internal/router`)**:
+   - Centraliza o registro e roteamento dos endpoints expostos por todos os módulos (`order`, `user`), permitindo que o `cmd/api/main.go` apenas chame o setup do router e inicialize o servidor.
+2. **Alta Coesão Vertical**:
+   - Cada módulo (ex: `internal/order`) encapsula suas entidades (`order.go`), endpoints (`handler.go`) e regras de aplicação (`service.go`).
+3. **Baixo Acoplamento**:
    - Mudanças nas regras de negócio de pedidos afetam apenas o pacote `internal/order`, sem poluir outros módulos.
-3. **Plataforma Compartilhada (`internal/platform`)**:
+4. **Plataforma Compartilhada (`internal/platform`)**:
    - Infraestrutura e serviços transversais (como conexão de banco de dados `database` e utilitários de autenticação `auth`) ficam centralizados em `internal/platform/`.
-4. **Múltiplos Entrypoints (`cmd/`)**:
+5. **Múltiplos Entrypoints (`cmd/`)**:
    - Suporte nativo a múltiplos executáveis:
-     - `cmd/api/main.go`: Servidor HTTP principal expondo as rotas dos módulos.
-     - `cmd/worker/main.go`: Worker assíncrono em background para processamento de filas e rotinas agendadas.
+     - `cmd/api/main.go`: Servidor HTTP principal que apenas chama a camada de router.
+     - `cmd/worker/main.go`: Worker assíncrono em background consumindo os serviços dos módulos.
 
 ---
 
@@ -32,15 +34,15 @@ A **Modular Architecture** organiza o código em torno de funcionalidades e cont
 │   └── worker/
 │       └── main.go             # Ponto de entrada de tarefas em background
 ├── internal/
+│   ├── router/                 # Centraliza todas as rotas dos módulos
+│   │   └── router.go
 │   ├── order/                  # Módulo de Pedidos (Vertical Slice)
 │   │   ├── order.go            # Entidades e tipos
 │   │   ├── handler.go          # Handlers HTTP
-│   │   ├── service.go          # Regras de negócio
-│   │   └── repository.go       # Persistência
+│   │   └── service.go          # Regras de negócio e dados
 │   ├── user/                   # Módulo de Usuários
 │   │   ├── user.go             # Entidades e tipos
-│   │   ├── handler.go          # Handlers HTTP
-│   │   └── repository.go       # Persistência
+│   │   └── handler.go          # Handlers HTTP e dados
 │   └── platform/               # Utilitários compartilhados de infraestrutura
 │       ├── database/           # Conexão e pooling de dados
 │       │   └── database.go
@@ -75,4 +77,3 @@ go run ./cmd/worker
 ```sh
 go test -v ./...
 ```
-

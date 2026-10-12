@@ -1,0 +1,26 @@
+package router
+
+import (
+	"github.com/gofiber/fiber/v2"
+
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/services"
+)
+
+// Setup registra todas as rotas da aplicação utilizando o framework Fiber.
+func Setup() *fiber.App {
+	app := fiber.New()
+
+	service := services.NewItemService()
+	handler := handlers.NewItemHandler(service)
+
+	app.Get("/items", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "Hello from Layered Architecture (Fiber)",
+			"items":   handler.GetItems(),
+		})
+	})
+
+	return app
+}
+

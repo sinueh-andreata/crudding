@@ -65,16 +65,25 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 						}
 					}
 				case "layered":
-					for _, f := range []string{"cmd/api/main.go", "internal/handlers/handler.go", "internal/services/service.go", "internal/repositories/repository.go", "internal/models/item.go"} {
+					for _, f := range []string{"cmd/api/main.go", "internal/router/router.go", "internal/handlers/handler.go", "internal/services/service.go", "internal/models/item.go"} {
 						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
 							t.Errorf("arquivo layered %s ausente: %v", f, err)
 						}
 					}
+					if _, err := os.Stat(filepath.Join(destination, "internal/repositories")); !os.IsNotExist(err) {
+						t.Errorf("camada de repositories não deveria existir em layered")
+					}
 				case "modular":
-					for _, f := range []string{"cmd/api/main.go", "cmd/worker/main.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/order/repository.go", "internal/user/user.go", "internal/user/handler.go", "internal/user/repository.go", "internal/platform/database/database.go", "internal/platform/auth/auth.go"} {
+					for _, f := range []string{"cmd/api/main.go", "cmd/worker/main.go", "internal/router/router.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/user/user.go", "internal/user/handler.go", "internal/platform/database/database.go", "internal/platform/auth/auth.go"} {
 						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
 							t.Errorf("arquivo modular %s ausente: %v", f, err)
 						}
+					}
+					if _, err := os.Stat(filepath.Join(destination, "internal/order/repository.go")); !os.IsNotExist(err) {
+						t.Errorf("repository.go não deveria existir em modular order")
+					}
+					if _, err := os.Stat(filepath.Join(destination, "internal/user/repository.go")); !os.IsNotExist(err) {
+						t.Errorf("repository.go não deveria existir em modular user")
 					}
 				case "hexagonal":
 					for _, f := range []string{"cmd/rest/main.go", "cmd/grpc/main.go", "internal/domain/product.go", "internal/domain/service.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/http/handler.go", "internal/adapters/grpc/server.go", "internal/adapters/postgres/repository.go"} {
@@ -134,6 +143,22 @@ func TestGenerateRejectsUnsupportedOptions(t *testing.T) {
 	} {
 		if err := Generate(filepath.Join(t.TempDir(), "project"), config, templates); err == nil || strings.Contains(err.Error(), "template") {
 			t.Errorf("Generate(%+v) should reject unsupported options before rendering, got %v", config, err)
+		}
+	}
+}
+
+func TestGenerateGoVet(t *testing.T) {
+	templates := os.DirFS(filepath.Join("..", ".."))
+	for _, arch := range []string{"flat", "layered", "modular"} {
+		dest := filepath.Join(t.TempDir(), arch)
+		cfg := types.ProjectConfig{
+			ProjectName:  arch,
+			Language:     "go",
+			Framework:    "raw",
+			Architecture: arch,
+		}
+		if err := Generate(dest, cfg, templates); err != nil {
+			t.Fatalf("Generate() error = %v for %s", err, arch)
 		}
 	}
 }

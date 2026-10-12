@@ -1,0 +1,30 @@
+package router
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/services"
+)
+
+// Setup registra todas as rotas da aplicação utilizando o router Chi.
+func Setup() http.Handler {
+	r := chi.NewRouter()
+
+	service := services.NewItemService()
+	handler := handlers.NewItemHandler(service)
+
+	r.Get("/items", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"message": "Hello from Layered Architecture (Chi)",
+			"items":   handler.GetItems(),
+		})
+	})
+
+	return r
+}
+

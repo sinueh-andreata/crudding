@@ -1,17 +1,31 @@
 package order
 
-// Service implementa os casos de uso do módulo de pedidos.
+import (
+	"sync"
+	"time"
+)
+
+// Service implementa a lógica e gerencia a coleção de pedidos.
 type Service struct {
-	repo *Repository
+	mu     sync.RWMutex
+	orders []Order
 }
 
-// NewService cria uma instância do serviço de pedidos.
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+// NewService cria uma instância do serviço de pedidos com dados iniciais.
+func NewService() *Service {
+	return &Service{
+		orders: []Order{
+			{ID: "ord-101", UserID: "usr-1", Total: 150.00, Status: "PENDING", CreatedAt: time.Now()},
+			{ID: "ord-102", UserID: "usr-2", Total: 320.50, Status: "COMPLETED", CreatedAt: time.Now()},
+		},
+	}
 }
 
 // GetOrders retorna os pedidos processados.
 func (s *Service) GetOrders() []Order {
-	return s.repo.List()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	copied := make([]Order, len(s.orders))
+	copy(copied, s.orders)
+	return copied
 }
-

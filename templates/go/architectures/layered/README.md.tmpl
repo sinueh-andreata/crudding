@@ -6,17 +6,21 @@ Projeto Go estruturado utilizando a **Layered Architecture** (Arquitetura em Cam
 
 ## 🏛️ O que é a Layered Architecture?
 
-A **Layered Architecture** organiza o sistema em camadas horizontais bem delineadas, com fluxo unidirecional de dependências:
+A **Layered Architecture** organiza o sistema em camadas bem delineadas, com fluxo unidirecional de dependências:
 
-$$\text{Handlers (Transporte)} \longrightarrow \text{Services (Negócio)} \longrightarrow \text{Repositories (Dados)} \longrightarrow \text{Models (Estruturas)}$$
+$$\text{Router (Rotas)} \longrightarrow \text{Handlers (Transporte)} \longrightarrow \text{Services (Negócio)} \longrightarrow \text{Models (Estruturas)}$$
 
 ### Princípios Chave:
-1. **Separação de Preocupações**:
-   - Cada camada tem uma responsabilidade estrita. O handler não executa consultas SQL, e o repositório não processa requisições HTTP.
-2. **Encapsulamento com `internal/`**:
+1. **Camada de Router Centralizada (`internal/router`)**:
+   - A camada de router centraliza a declaração e o mapeamento de todas as rotas da aplicação, mantendo o ponto de entrada (`cmd/api/main.go`) enxuto e desacoplado.
+2. **Handlers (Controladores HTTP) (`internal/handlers`)**:
+   - Tratam requisições e formatam respostas, delegando a execução para a camada de serviços.
+3. **Services (Regras de Negócio) (`internal/services`)**:
+   - Contêm as regras centrais de negócio e gerenciam as entidades.
+4. **Encapsulamento com `internal/`**:
    - No Go, qualquer pacote dentro do diretório `internal/` não pode ser importado por outros módulos externos, garantindo privacidade arquitetural.
-3. **Ponto de Entrada Isolado (`cmd/api`)**:
-   - O arquivo `cmd/api/main.go` atua como o *Composition Root*, instanciando dependências de baixo para cima e injetando-as.
+5. **Entrypoint Enxuto (`cmd/api/main.go`)**:
+   - O `main.go` apenas invoca o setup do router e inicializa o servidor web.
 
 ---
 
@@ -26,12 +30,16 @@ $$\text{Handlers (Transporte)} \longrightarrow \text{Services (Negócio)} \longr
 {{.ProjectName}}/
 ├── cmd/
 │   └── api/
-│       └── main.go           # Ponto de entrada REST ({{.Framework}})
+│       └── main.go           # Ponto de entrada que apenas inicializa o router ({{.Framework}})
 ├── internal/
+│   ├── router/               # Centraliza todas as rotas da aplicação
+│   │   └── router.go
 │   ├── handlers/             # Lógica de transporte HTTP / Controladores
+│   │   └── handler.go
 │   ├── services/             # Regras de negócio da aplicação
-│   ├── repositories/         # Acesso a dados e persistência
+│   │   └── service.go
 │   └── models/               # Estruturas de dados compartilhadas
+│       └── item.go
 ├── go.mod                    # Módulo Go
 ├── go.sum                    # Checksums de dependências
 ├── .gitignore                # Arquivos ignorados pelo Git
@@ -56,4 +64,3 @@ go run ./cmd/api
 ```sh
 go test -v ./...
 ```
-

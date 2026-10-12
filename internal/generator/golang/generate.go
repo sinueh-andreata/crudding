@@ -62,9 +62,9 @@ var architectures = map[string]architectureDef{
 	"layered": {
 		directories: []string{
 			"cmd/api",
+			"internal/router",
 			"internal/handlers",
 			"internal/services",
-			"internal/repositories",
 			"internal/models",
 		},
 		files: func(framework string) []common.File {
@@ -74,9 +74,9 @@ var architectures = map[string]architectureDef{
 				{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
 				{TemplatePath: "templates/go/architectures/layered/README.md.tmpl", OutputPath: "README.md"},
 				{TemplatePath: fmt.Sprintf("templates/go/architectures/layered/frameworks/%s/main.go.tmpl", framework), OutputPath: "cmd/api/main.go"},
+				{TemplatePath: fmt.Sprintf("templates/go/architectures/layered/router/%s/router.go.tmpl", framework), OutputPath: "internal/router/router.go"},
 				{TemplatePath: "templates/go/architectures/layered/handlers/handler.go.tmpl", OutputPath: "internal/handlers/handler.go"},
 				{TemplatePath: "templates/go/architectures/layered/services/service.go.tmpl", OutputPath: "internal/services/service.go"},
-				{TemplatePath: "templates/go/architectures/layered/repositories/repository.go.tmpl", OutputPath: "internal/repositories/repository.go"},
 				{TemplatePath: "templates/go/architectures/layered/models/item.go.tmpl", OutputPath: "internal/models/item.go"},
 			}
 		},
@@ -85,6 +85,7 @@ var architectures = map[string]architectureDef{
 		directories: []string{
 			"cmd/api",
 			"cmd/worker",
+			"internal/router",
 			"internal/order",
 			"internal/user",
 			"internal/platform/database",
@@ -98,13 +99,12 @@ var architectures = map[string]architectureDef{
 				{TemplatePath: "templates/go/architectures/modular/README.md.tmpl", OutputPath: "README.md"},
 				{TemplatePath: fmt.Sprintf("templates/go/architectures/modular/frameworks/%s/main.go.tmpl", framework), OutputPath: "cmd/api/main.go"},
 				{TemplatePath: "templates/go/architectures/modular/worker/main.go.tmpl", OutputPath: "cmd/worker/main.go"},
+				{TemplatePath: fmt.Sprintf("templates/go/architectures/modular/router/%s/router.go.tmpl", framework), OutputPath: "internal/router/router.go"},
 				{TemplatePath: "templates/go/architectures/modular/order/order.go.tmpl", OutputPath: "internal/order/order.go"},
 				{TemplatePath: "templates/go/architectures/modular/order/handler.go.tmpl", OutputPath: "internal/order/handler.go"},
 				{TemplatePath: "templates/go/architectures/modular/order/service.go.tmpl", OutputPath: "internal/order/service.go"},
-				{TemplatePath: "templates/go/architectures/modular/order/repository.go.tmpl", OutputPath: "internal/order/repository.go"},
 				{TemplatePath: "templates/go/architectures/modular/user/user.go.tmpl", OutputPath: "internal/user/user.go"},
 				{TemplatePath: "templates/go/architectures/modular/user/handler.go.tmpl", OutputPath: "internal/user/handler.go"},
-				{TemplatePath: "templates/go/architectures/modular/user/repository.go.tmpl", OutputPath: "internal/user/repository.go"},
 				{TemplatePath: "templates/go/architectures/modular/platform/database/database.go.tmpl", OutputPath: "internal/platform/database/database.go"},
 				{TemplatePath: "templates/go/architectures/modular/platform/auth/auth.go.tmpl", OutputPath: "internal/platform/auth/auth.go"},
 			}

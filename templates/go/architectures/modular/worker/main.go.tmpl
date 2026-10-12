@@ -10,7 +10,7 @@ import (
 
 func main() {
 	_ = database.Connect()
-	orderRepo := order.NewRepository()
+	orderService := order.NewService()
 
 	log.Println("[Worker] Background Worker iniciado...")
 
@@ -19,10 +19,9 @@ func main() {
 
 	for i := 1; i <= 3; i++ {
 		<-ticker.C
-		orders := orderRepo.List()
+		orders := orderService.GetOrders()
 		log.Printf("[Worker] Ciclo %d executado: %d pedidos processados", i, len(orders))
 	}
 
 	log.Println("[Worker] Ciclo de demonstração concluído com sucesso.")
 }
-

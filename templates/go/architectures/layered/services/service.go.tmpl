@@ -1,22 +1,32 @@
 package services
 
 import (
+	"sync"
+
 	"{{.GoModule}}/internal/models"
-	"{{.GoModule}}/internal/repositories"
 )
 
-// ItemService orquestra a lógica de negócio para manipulação de itens.
+// ItemService orquestra a lógica de negócio e gerencia os itens.
 type ItemService struct {
-	repo *repositories.ItemRepository
+	mu    sync.RWMutex
+	items []models.Item
 }
 
-// NewItemService instancia o serviço injetando o repositório necessário.
-func NewItemService(repo *repositories.ItemRepository) *ItemService {
-	return &ItemService{repo: repo}
+// NewItemService instancia o serviço inicializando os dados.
+func NewItemService() *ItemService {
+	return &ItemService{
+		items: []models.Item{
+			{ID: "1", Title: "Notebook Gamer", Description: "16GB RAM, RTX 4060", Price: 4999.00},
+			{ID: "2", Title: "Monitor UltraWide", Description: "34 polegadas 144Hz", Price: 2199.90},
+		},
+	}
 }
 
-// ListItems retorna os itens processados conforme as regras de negócio.
+// ListItems retorna os itens cadastrados.
 func (s *ItemService) ListItems() []models.Item {
-	return s.repo.FindAll()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	copied := make([]models.Item, len(s.items))
+	copy(copied, s.items)
+	return copied
 }
-

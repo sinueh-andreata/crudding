@@ -1,27 +1,10 @@
 package main
 
 import (
-	"github.com/gofiber/fiber/v2"
-
-	"{{.GoModule}}/internal/handlers"
-	"{{.GoModule}}/internal/repositories"
-	"{{.GoModule}}/internal/services"
+	"{{.GoModule}}/internal/router"
 )
 
 func main() {
-	repo := repositories.NewItemRepository()
-	service := services.NewItemService(repo)
-	handler := handlers.NewItemHandler(service)
-
-	app := fiber.New()
-
-	app.Get("/items", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Hello from Layered Architecture (Fiber)",
-			"items":   handler.GetItems(),
-		})
-	})
-
+	app := router.Setup()
 	_ = app.Listen(":8080")
 }
-
