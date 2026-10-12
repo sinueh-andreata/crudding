@@ -1,9 +1,15 @@
-import { createServer } from "node:http";
-import { getMessage } from "{{.ServiceImport}}";
+{{if .AppImport}}import { app } from "{{.AppImport}}.js";
+
+const port = Number(process.env.PORT ?? 3000);
+app.listen(port, () => console.log(`Server listening on :${port}`));
+{{else}}import { createServer } from "node:http";
+import { getMessage } from "{{.ServiceImport}}.js";
 
 const server = createServer((_request, response) => {
-  response.writeHead(200, { "content-type": "application/json" });
+  response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
   response.end(JSON.stringify({ message: getMessage() }));
 });
 
-server.listen(3000, () => console.log("Listening on http://localhost:3000"));
+const port = Number(process.env.PORT ?? 3000);
+server.listen(port, () => console.log(`Server listening on :${port}`));
+{{end}}

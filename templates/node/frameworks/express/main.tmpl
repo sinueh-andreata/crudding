@@ -1,10 +1,11 @@
-import express from "express";
-import { getMessage } from "{{.ServiceImport}}";
+{{if .AppImport}}import { app } from "{{.AppImport}}.js";
+{{else}}import express from "express";
+import { getMessage } from "{{.ServiceImport}}.js";
 
 const app = express();
+app.use(express.json());
+app.get("/", (_request, response) => response.json({ message: getMessage() }));
+{{end}}
 
-app.get("/", (_request, response) => {
-  response.json({ message: getMessage() });
-});
-
-app.listen(3000, () => console.log("Listening on http://localhost:3000"));
+const port = Number(process.env.PORT ?? 3000);
+app.listen(port, () => console.log(`Server listening on :${port}`));

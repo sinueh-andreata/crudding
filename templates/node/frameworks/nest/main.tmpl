@@ -1,22 +1,21 @@
-import "reflect-metadata";
+{{if .AppImport}}import { app } from "{{.AppImport}}.js";
+{{else}}import "reflect-metadata";
 import { Controller, Get, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { getMessage } from "{{.ServiceImport}}";
+import { getMessage } from "{{.ServiceImport}}.js";
 
 class AppController {
-  home() {
+  getMessage() {
     return { message: getMessage() };
   }
 }
 
-const homeDescriptor = Object.getOwnPropertyDescriptor(AppController.prototype, "home");
-if (homeDescriptor) {
-  Get()(AppController.prototype, "home", homeDescriptor);
-}
 Controller()(AppController);
+Get()(AppController.prototype, "getMessage", Object.getOwnPropertyDescriptor(AppController.prototype, "getMessage"){{if eq .Runtime "ts"}}!{{end}});
 
 class AppModule {}
 Module({ controllers: [AppController] })(AppModule);
 
 const app = await NestFactory.create(AppModule);
-await app.listen(3000);
+{{end}}
+await app.listen(Number(process.env.PORT ?? 3000));

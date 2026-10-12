@@ -31,6 +31,8 @@ Guia de contexto, arquitetura e instruções para agentes de IA atuando no repos
 
 Cada arquitetura em Go possui seu próprio `README.md` detalhado explicando o funcionamento, princípios e comandos de execução.
 
+- **Para Node**: runtimes `js` e `ts`; frameworks `raw`, `express`, `fastify`, `nest`; arquiteturas `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`.
+
 ---
 
 ## 2. Estrutura do Repositório

@@ -1,0 +1,37 @@
+{{if eq .Framework "raw"}}import { createServer } from "node:http";
+import { getMessage } from "{{.ServiceImport}}.js";
+
+export const app = createServer((_request, response) => {
+  response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+  response.end(JSON.stringify({ message: getMessage() }));
+});
+{{else if eq .Framework "express"}}import express from "express";
+import { getMessage } from "{{.ServiceImport}}.js";
+
+export const app = express();
+app.use(express.json());
+app.get("/", (_request, response) => response.json({ message: getMessage() }));
+{{else if eq .Framework "fastify"}}import Fastify from "fastify";
+import { getMessage } from "{{.ServiceImport}}.js";
+
+export const app = Fastify({ logger: true });
+app.get("/", async () => ({ message: getMessage() }));
+{{else}}import "reflect-metadata";
+import { Controller, Get, Module } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { getMessage } from "{{.ServiceImport}}.js";
+
+class AppController {
+  getMessage() {
+    return { message: getMessage() };
+  }
+}
+
+Controller()(AppController);
+Get()(AppController.prototype, "getMessage", Object.getOwnPropertyDescriptor(AppController.prototype, "getMessage"){{if eq .Runtime "ts"}}!{{end}});
+
+class AppModule {}
+Module({ controllers: [AppController] })(AppModule);
+
+export const app = await NestFactory.create(AppModule);
+{{end}}

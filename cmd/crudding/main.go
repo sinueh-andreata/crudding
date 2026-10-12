@@ -84,7 +84,7 @@ func architectureOptionsFor(language string) []string {
 	case "go":
 		return []string{"flat", "layered", "modular", "hexagonal", "clean arch"}
 	case "node":
-		return []string{"monorepo", "camadas", "clean arch", "hexagonal", "4horse"}
+		return []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
 	default:
 		return nil
 	}

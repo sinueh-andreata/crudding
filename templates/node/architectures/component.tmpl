@@ -1,0 +1,57 @@
+{{if eq .Kind "service"}}{{if eq .Runtime "ts"}}export function getMessage(): string {
+  return "{{.Architecture}} application is running";
+}
+{{else}}export function getMessage() {
+  return "{{.Architecture}} application is running";
+}
+{{end}}
+{{if eq .Runtime "ts"}}export class {{.Name}} {
+  list(): string[] {
+    return ["sample"];
+  }
+}
+{{else}}export class {{.Name}} {
+  list() {
+    return ["sample"];
+  }
+}
+{{end}}{{else if eq .Kind "port"}}{{if eq .Runtime "ts"}}export interface {{.Name}} {
+  execute(input: unknown): Promise<unknown>;
+}
+{{else}}export const {{.Name}} = Object.freeze({
+  execute: async (_input) => undefined,
+});
+{{end}}{{else if eq .Kind "config"}}export const {{.Name}} = Object.freeze({
+  port: Number(process.env.PORT ?? 3000),
+});
+{{else if eq .Kind "model"}}{{if eq .Runtime "ts"}}export class {{.Name}} {
+  constructor(public readonly id: string) {}
+}
+{{else}}export class {{.Name}} {
+  constructor(id) {
+    this.id = id;
+  }
+}
+{{end}}{{else if eq .Kind "entity"}}{{if eq .Runtime "ts"}}export class {{.Name}} {
+  constructor(public readonly id: string) {
+    if (!id) throw new Error("id is required");
+  }
+}
+{{else}}export class {{.Name}} {
+  constructor(id) {
+    if (!id) throw new Error("id is required");
+    this.id = id;
+  }
+}
+{{end}}
+{{else if eq .Runtime "ts"}}export class {{.Name}} {
+  execute(input: unknown = {}): unknown {
+    return input;
+  }
+}
+{{else}}export class {{.Name}} {
+  execute(input = {}) {
+    return input;
+  }
+}
+{{end}}

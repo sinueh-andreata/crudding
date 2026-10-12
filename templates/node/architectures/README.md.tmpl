@@ -1,0 +1,23 @@
+# {{.ProjectName}}
+
+Projeto Node.js gerado pelo crudding.
+
+- Runtime: {{.Runtime}}
+- Framework: {{.Framework}}
+- Arquitetura: {{.Architecture}}
+
+{{if eq .Architecture "flat"}}A aplicação mantém o ponto de entrada e a lógica próximos, sem camadas artificiais.{{else if eq .Architecture "layered"}}A aplicação separa configuração HTTP, rotas, controllers, serviços e schemas em camadas.{{else if eq .Architecture "modular"}}A aplicação é organizada por domínio em `src/features/`, com módulos de autenticação, usuários e produtos.{{else if eq .Architecture "hexagonal"}}O core define domínio e ports; adapters de entrada e saída conectam HTTP, persistência e notificações.{{else}}O domínio e os casos de uso ficam no centro; a infraestrutura implementa persistência, HTTP e pagamentos.{{end}}
+
+## Executar
+
+```sh
+npm install
+npm run dev
+```
+
+Para compilar TypeScript:
+
+```sh
+npm run build
+npm start
+```

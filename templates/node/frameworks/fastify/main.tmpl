@@ -1,8 +1,10 @@
-import Fastify from "fastify";
-import { getMessage } from "{{.ServiceImport}}";
+{{if .AppImport}}import { app } from "{{.AppImport}}.js";
+{{else}}import Fastify from "fastify";
+import { getMessage } from "{{.ServiceImport}}.js";
 
 const app = Fastify({ logger: true });
-
 app.get("/", async () => ({ message: getMessage() }));
+{{end}}
 
-await app.listen({ host: "0.0.0.0", port: 3000 });
+const port = Number(process.env.PORT ?? 3000);
+await app.listen({ port, host: "0.0.0.0" });
