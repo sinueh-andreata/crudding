@@ -1,0 +1,14 @@
+from flask import Flask, jsonify
+
+from {{.ServiceModule}} import get_message
+
+app = Flask(__name__)
+
+
+@app.get("/")
+def home():
+    return jsonify(message=get_message())
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

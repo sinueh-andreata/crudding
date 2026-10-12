@@ -1,0 +1,8 @@
+from dataclasses import dataclass
+
+
+@dataclass
+class Order:
+    id: int
+    checkout_id: int
+    status: str = "created"

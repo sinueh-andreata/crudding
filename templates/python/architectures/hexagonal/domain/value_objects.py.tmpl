@@ -1,0 +1,10 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Email:
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value.count("@") != 1 or "." not in self.value.rsplit("@", 1)[1]:
+            raise ValueError("invalid email address")

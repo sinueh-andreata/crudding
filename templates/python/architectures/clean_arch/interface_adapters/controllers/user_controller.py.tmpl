@@ -1,0 +1,15 @@
+from src.app.application.use_cases.register_user import RegisterUser
+from src.app.interface_adapters.presenters.user_presenter import present_user
+
+
+class UserController:
+    def __init__(self, register_user: RegisterUser):
+        self.register_user = register_user
+
+    def register(self, payload: dict) -> dict:
+        user = self.register_user.execute(
+            name=payload["name"],
+            email=payload["email"],
+            password_hash=payload["password"],
+        )
+        return present_user(user)

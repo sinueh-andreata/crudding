@@ -1,0 +1,9 @@
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Order:
+    id: int
+    user_id: int
+    total: float
+    items: list[str] = field(default_factory=list)

@@ -1,0 +1,18 @@
+from src.app.models.order import Order
+from src.app.services import order_service
+
+
+def create_order(payload: dict) -> Order:
+    return order_service.create_order(
+        user_id=int(payload["user_id"]),
+        total=float(payload["total"]),
+        items=list(payload.get("items", [])),
+    )
+
+
+def get_order(order_id: int) -> Order | None:
+    return order_service.get_order(order_id)
+
+
+def list_orders() -> list[Order]:
+    return order_service.list_orders()

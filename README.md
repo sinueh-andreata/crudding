@@ -8,7 +8,7 @@ CLI interativo em Go 1.27 que gera projetos a partir de templates embutidos no e
 go run ./cmd/crudding
 ```
 
-Use as setas para navegar, Espaço para selecionar e Enter para avançar. Escolha Python, Go ou Node; depois selecione o framework e uma arquitetura. Para Go, as opções são: `flat`, `layered`, `modular`, `hexagonal` ou `clean arch`. Para Python e Node, as opções são: `monorepo`, `camadas`, `clean arch`, `hexagonal` ou `4horse`. Para Node, escolha também JavaScript (`js`) ou TypeScript (`ts`). Cada projeto e arquitetura conta com seu próprio README.md explicativo. Antes de gerar, o crudding pede um nome; esse nome será usado como pasta dentro do diretório atual. Uma pasta existente nunca é sobrescrita. Pressione `q` ou Esc para sair.
+Use as setas para navegar, Espaço para selecionar e Enter para avançar. Escolha Python, Go ou Node; depois selecione o framework e uma arquitetura. Para Python, as opções são: `flat`, `layered`, `modular`, `hexagonal` ou `clean_arch`. Para Go, as opções são: `flat`, `layered`, `modular`, `hexagonal` ou `clean arch`. Para Node, as opções são: `monorepo`, `camadas`, `clean arch`, `hexagonal` ou `4horse`; escolha também JavaScript (`js`) ou TypeScript (`ts`). Antes de gerar, o crudding pede um nome; esse nome será usado como pasta dentro do diretório atual. Uma pasta existente nunca é sobrescrita. Pressione `q` ou Esc para sair.
 
 Os arquivos dos templates são compilados dentro do executável, sem baixar templates durante a geração. Para instalar as dependências, siga o README criado no projeto: Python usa `python -m pip install -r requirements.txt`, Go usa `go mod tidy`, e Node usa `npm install`.
 

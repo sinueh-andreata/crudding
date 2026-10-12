@@ -1,0 +1,22 @@
+from src.app.models.order import Order
+
+_orders: dict[int, Order] = {}
+_next_order_id = 1
+
+
+def create_order(user_id: int, total: float, items: list[str]) -> Order:
+    global _next_order_id
+    if total < 0:
+        raise ValueError("order total cannot be negative")
+    order = Order(id=_next_order_id, user_id=user_id, total=total, items=items)
+    _orders[order.id] = order
+    _next_order_id += 1
+    return order
+
+
+def get_order(order_id: int) -> Order | None:
+    return _orders.get(order_id)
+
+
+def list_orders() -> list[Order]:
+    return list(_orders.values())

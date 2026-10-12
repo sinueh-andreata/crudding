@@ -20,12 +20,14 @@ Guia de contexto, arquitetura e instruções para agentes de IA atuando no repos
     3. `modular`: *package-by-feature* com módulos (`order`, `user`), camada centralizadora `internal/router`, plataforma compartilhada (`platform/database`, `platform/auth`) e múltiplos executáveis (`cmd/api`, `cmd/worker`).
     4. `hexagonal`: *Ports & Adapters* com `internal/domain`, `internal/ports`, `internal/adapters` (`http`, `grpc`, `postgres`) e múltiplos entrypoints (`cmd/rest`, `cmd/grpc`).
     5. `clean arch`: Clean Architecture de Uncle Bob com `domain`, `application`, `ports`, `infrastructure` (`persistence`, `http`, `messaging`), utilitários em `pkg/validator` e `migrations/`.
-  - **Para Python e Node**:
-    - `monorepo`
-    - `camadas` (Layered / Onion básico)
-    - `clean arch` (Clean Architecture / Uncle Bob)
-    - `hexagonal` (Ports & Adapters)
-    - `4horse` (Routes, Controllers, Services, Repositories)
+   - **Para Python**:
+      - `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`, com estruturas próprias sob `src/`.
+   - **Para Node**:
+      - `monorepo`
+      - `camadas` (Layered / Onion básico)
+      - `clean arch` (Clean Architecture / Uncle Bob)
+      - `hexagonal` (Ports & Adapters)
+      - `4horse` (Routes, Controllers, Services, Repositories)
 
 Cada arquitetura em Go possui seu próprio `README.md` detalhado explicando o funcionamento, princípios e comandos de execução.
 

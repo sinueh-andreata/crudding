@@ -1,0 +1,9 @@
+from src.app.application.use_cases.register_user import RegisterUser
+from src.app.interface_adapters.controllers.user_controller import UserController
+from src.app.interface_adapters.persistence.user_repository import InMemoryUserRepository
+
+
+def build_user_controller() -> UserController:
+    repository = InMemoryUserRepository()
+    register_user = RegisterUser(repository)
+    return UserController(register_user)

@@ -1,0 +1,18 @@
+from src.app.domain.entities import User
+
+
+class UserService:
+    def __init__(self, repository, logger):
+        self.repository = repository
+        self.logger = logger
+
+    def register(self, user_id: str, name: str, email: str) -> User:
+        if not name.strip():
+            raise ValueError("name is required")
+        user = User(id=user_id, name=name.strip(), email=email)
+        saved_user = self.repository.save(user)
+        self.logger.info("registered user %s", saved_user.id)
+        return saved_user
+
+    def find(self, user_id: str) -> User | None:
+        return self.repository.find_by_id(user_id)

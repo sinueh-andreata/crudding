@@ -1,0 +1,21 @@
+from uuid import uuid4
+
+from src.app.application.port.outbound.register_user_port import RegisterUserPort
+from src.app.domain.model.email import Email
+from src.app.domain.model.user import User
+
+
+class RegisterUser:
+    def __init__(self, users: RegisterUserPort):
+        self.users = users
+
+    def execute(self, name: str, email: str, password_hash: str) -> User:
+        if not name.strip():
+            raise ValueError("name is required")
+        user = User(
+            id=uuid4().hex,
+            name=name.strip(),
+            email=Email(email),
+            password_hash=password_hash,
+        )
+        return self.users.save(user)

@@ -1,0 +1,13 @@
+from abc import ABC, abstractmethod
+
+from src.app.domain.entities import User
+
+
+class UserRepository(ABC):
+    @abstractmethod
+    def save(self, user: User) -> User:
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_by_id(self, user_id: str) -> User | None:
+        raise NotImplementedError

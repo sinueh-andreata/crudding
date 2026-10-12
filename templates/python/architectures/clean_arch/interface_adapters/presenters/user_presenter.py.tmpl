@@ -1,0 +1,5 @@
+from src.app.domain.model.user import User
+
+
+def present_user(user: User) -> dict[str, str]:
+    return {"id": user.id, "name": user.name, "email": user.email.value}

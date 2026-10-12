@@ -79,10 +79,14 @@ func frameworkOptionsFor(language string) []string {
 
 func architectureOptionsFor(language string) []string {
 	switch language {
+	case "python":
+		return []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
 	case "go":
 		return []string{"flat", "layered", "modular", "hexagonal", "clean arch"}
-	default:
+	case "node":
 		return []string{"monorepo", "camadas", "clean arch", "hexagonal", "4horse"}
+	default:
+		return nil
 	}
 }
 

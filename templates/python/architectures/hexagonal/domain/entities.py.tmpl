@@ -1,0 +1,19 @@
+from dataclasses import dataclass
+
+
+@dataclass
+class User:
+    id: str
+    name: str
+    email: str
+
+
+@dataclass
+class Product:
+    id: str
+    name: str
+    price: float
+
+    def __post_init__(self) -> None:
+        if self.price < 0:
+            raise ValueError("product price cannot be negative")

@@ -1,0 +1,6 @@
+class DomainError(Exception):
+    """Base exception for domain rule violations."""
+
+
+class UserNotFound(DomainError):
+    """Raised when a user cannot be found."""

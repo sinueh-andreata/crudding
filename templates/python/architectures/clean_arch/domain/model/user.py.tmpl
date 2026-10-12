@@ -1,0 +1,11 @@
+from dataclasses import dataclass
+
+from src.app.domain.model.email import Email
+
+
+@dataclass
+class User:
+    id: str
+    name: str
+    email: Email
+    password_hash: str

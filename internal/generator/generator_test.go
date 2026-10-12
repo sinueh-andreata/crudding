@@ -12,12 +12,13 @@ import (
 
 func TestGenerateAllTemplateCombinations(t *testing.T) {
 	templates := os.DirFS(filepath.Join("..", ".."))
+	pythonArchitectures := []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
 	legacyArchitectures := []string{"monorepo", "camadas", "clean arch", "hexagonal", "4horse"}
 	golangArchitectures := []string{"flat", "layered", "modular", "hexagonal", "clean arch"}
 
 	cases := []types.ProjectConfig{}
 	for _, framework := range []string{"raw", "fastapi", "django", "flask"} {
-		for _, architecture := range legacyArchitectures {
+		for _, architecture := range pythonArchitectures {
 			cases = append(cases, types.ProjectConfig{ProjectName: "Sample", Language: "python", Framework: framework, Architecture: architecture})
 		}
 	}
@@ -110,6 +111,45 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 					t.Fatalf("invalid package.json: %v", err)
 				}
 			}
+
+			if config.Language == "python" {
+				if !strings.Contains(string(readmeContent), "- Arquitetura: "+config.Architecture) {
+					t.Errorf("README não identifica a arquitetura %s", config.Architecture)
+				}
+				requiredFiles := map[string][]string{
+					"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/main.py", "tests/test_modulo.py"},
+					"layered":    {"src/app/controllers/user_controller.py", "src/app/services/greeting.py", "src/app/models/order.py", "src/app/router/router.py"},
+					"modular":    {"src/app/catalog/service.py", "src/app/checkout/models.py", "src/app/orders/views.py", "src/app/shared/__init__.py"},
+					"hexagonal":  {"src/app/domain/entities.py", "src/app/application/greeting_service.py", "src/app/ports/user_repository.py", "src/app/infrastructure/logging_adapter.py", "src/app/routers/user.py", "src/app/main.py"},
+					"clean_arch": {"src/app/domain/model/user.py", "src/app/application/use_cases/register_user.py", "src/app/application/port/outbound/register_user_port.py", "src/app/interface_adapters/controllers/user_controller.py", "src/app/frameworks_and_drivers/web/main.py", "src/app/bootstrap.py"},
+				}
+				for _, requiredFile := range requiredFiles[config.Architecture] {
+					if _, err := os.Stat(filepath.Join(destination, requiredFile)); err != nil {
+						t.Errorf("arquivo Python %s ausente para arquitetura %s: %v", requiredFile, config.Architecture, err)
+					}
+				}
+				if config.Architecture == "flat" {
+					testContents, err := os.ReadFile(filepath.Join(destination, "tests/test_modulo.py"))
+					if err != nil || !strings.Contains(string(testContents), "def test_get_message") {
+						t.Errorf("teste do módulo flat não foi gerado corretamente: %v", err)
+					}
+				}
+				codeChecks := map[string]struct {
+					path    string
+					snippet string
+				}{
+					"flat":       {"src/sample/modulo.py", "def get_message"},
+					"layered":    {"src/app/services/user_service.py", "def create_user"},
+					"modular":    {"src/app/catalog/service.py", "def add_product"},
+					"hexagonal":  {"src/app/ports/user_repository.py", "class UserRepository(ABC)"},
+					"clean_arch": {"src/app/application/use_cases/register_user.py", "class RegisterUser"},
+				}
+				codeCheck := codeChecks[config.Architecture]
+				code, err := os.ReadFile(filepath.Join(destination, codeCheck.path))
+				if err != nil || !strings.Contains(string(code), codeCheck.snippet) {
+					t.Errorf("código funcional não gerado em %s para arquitetura %s: %v", codeCheck.path, config.Architecture, err)
+				}
+			}
 		})
 	}
 }
@@ -139,6 +179,7 @@ func TestGenerateRejectsUnsupportedOptions(t *testing.T) {
 		{Language: "go", Framework: "express", Architecture: "flat"},
 		{Language: "go", Framework: "raw", Architecture: "monorepo"},
 		{Language: "node", Runtime: "ruby", Framework: "raw", Architecture: "camadas"},
+		{Language: "python", Framework: "raw", Architecture: "monorepo"},
 		{Language: "python", Framework: "raw", Architecture: "unknown"},
 	} {
 		if err := Generate(filepath.Join(t.TempDir(), "project"), config, templates); err == nil || strings.Contains(err.Error(), "template") {

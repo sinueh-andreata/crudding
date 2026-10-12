@@ -1,0 +1,33 @@
+# {{.ProjectName}}
+
+Projeto Python gerado pelo crudding.
+
+- Framework: {{.Framework}}
+- Arquitetura: layered
+
+Controllers, services, models e router ficam organizados em `src/app/`.
+
+## Executar
+
+Instale as dependências:
+
+```sh
+python -m pip install -r requirements.txt
+```
+
+{{if eq .Framework "fastapi"}}Inicie a API:
+
+```sh
+uvicorn {{.EntryModule}}:app --reload
+```
+{{else if eq .Framework "django"}}Inicie o servidor de desenvolvimento:
+
+```sh
+python -m {{.EntryModule}} runserver
+```
+{{else}}Inicie a aplicação:
+
+```sh
+python -m {{.EntryModule}}
+```
+{{end}}

@@ -1,0 +1,13 @@
+from src.app.orders.service import list_orders, place_order
+
+
+def create_order(payload: dict) -> dict:
+    order = place_order(int(payload["checkout_id"]))
+    return {"id": order.id, "checkout_id": order.checkout_id, "status": order.status}
+
+
+def order_list() -> list[dict]:
+    return [
+        {"id": order.id, "checkout_id": order.checkout_id, "status": order.status}
+        for order in list_orders()
+    ]

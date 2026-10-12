@@ -1,0 +1,25 @@
+from src.app.catalog.service import get_product
+from src.app.checkout.models import Checkout
+
+_checkouts: dict[int, Checkout] = {}
+
+
+def start_checkout(product_ids: list[int]) -> Checkout:
+    if not product_ids:
+        raise ValueError("checkout must contain at least one product")
+    products = [get_product(product_id) for product_id in product_ids]
+    if any(product is None for product in products):
+        raise ValueError("checkout contains an unknown product")
+    total = sum(product.price for product in products if product is not None)
+    checkout_id = max(_checkouts, default=0) + 1
+    checkout = Checkout(id=checkout_id, product_ids=product_ids, total=total)
+    _checkouts[checkout.id] = checkout
+    return checkout
+
+
+def complete_checkout(checkout_id: int) -> Checkout:
+    checkout = _checkouts.get(checkout_id)
+    if checkout is None:
+        raise ValueError("checkout not found")
+    checkout.completed = True
+    return checkout

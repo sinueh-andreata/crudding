@@ -1,0 +1,14 @@
+from src.app.domain.entities import Product
+
+
+class ProductService:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def register(self, product_id: str, name: str, price: float) -> Product:
+        if not name.strip() or price < 0:
+            raise ValueError("product name is required and price must be non-negative")
+        return self.repository.save(Product(id=product_id, name=name.strip(), price=price))
+
+    def find(self, product_id: str) -> Product | None:
+        return self.repository.find_by_id(product_id)

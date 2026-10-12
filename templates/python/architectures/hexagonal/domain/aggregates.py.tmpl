@@ -1,0 +1,12 @@
+from src.app.domain.entities import User
+
+
+class UserAggregate:
+    def __init__(self, user: User):
+        self.user = user
+        self.events: list[dict[str, str]] = []
+
+    def change_email(self, email: str) -> None:
+        previous_email = self.user.email
+        self.user.email = email
+        self.events.append({"type": "user_email_changed", "from": previous_email, "to": email})

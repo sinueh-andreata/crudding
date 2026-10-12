@@ -1,0 +1,33 @@
+# {{.ProjectName}}
+
+Projeto Python gerado pelo crudding.
+
+- Framework: {{.Framework}}
+- Arquitetura: modular
+
+Cada feature tem seus modelos, serviços e views em `src/app/`; `shared/` contém recursos comuns.
+
+## Executar
+
+Instale as dependências:
+
+```sh
+python -m pip install -r requirements.txt
+```
+
+{{if eq .Framework "fastapi"}}Inicie a API:
+
+```sh
+uvicorn {{.EntryModule}}:app --reload
+```
+{{else if eq .Framework "django"}}Inicie o servidor de desenvolvimento:
+
+```sh
+python -m {{.EntryModule}} runserver
+```
+{{else}}Inicie a aplicação:
+
+```sh
+python -m {{.EntryModule}}
+```
+{{end}}

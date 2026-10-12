@@ -1,0 +1,13 @@
+from src.app.application.product_service import ProductService
+
+
+def create_product(service: ProductService, payload: dict) -> dict:
+    product = service.register(payload["id"], payload["name"], float(payload["price"]))
+    return {"id": product.id, "name": product.name, "price": product.price}
+
+
+def get_product(service: ProductService, product_id: str) -> dict | None:
+    product = service.find(product_id)
+    if product is None:
+        return None
+    return {"id": product.id, "name": product.name, "price": product.price}

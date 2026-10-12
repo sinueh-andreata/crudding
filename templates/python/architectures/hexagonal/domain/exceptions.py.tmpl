@@ -1,0 +1,6 @@
+class DomainError(Exception):
+    """Base exception for domain rule violations."""
+
+
+class EntityNotFound(DomainError):
+    """Raised when a requested entity does not exist."""
