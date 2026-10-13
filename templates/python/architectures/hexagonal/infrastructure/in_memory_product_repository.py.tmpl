@@ -1,0 +1,16 @@
+from src.app.domain.entities import Product
+
+
+class InMemoryProductRepository:
+    def __init__(self):
+        self._products: dict[str, Product] = {}
+
+    def save(self, product: Product) -> Product:
+        self._products[product.id] = product
+        return product
+
+    def find_by_id(self, product_id: str) -> Product | None:
+        return self._products.get(product_id)
+
+    def find_all(self) -> list[Product]:
+        return list(self._products.values())

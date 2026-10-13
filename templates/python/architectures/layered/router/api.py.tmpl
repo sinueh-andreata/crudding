@@ -1,0 +1,65 @@
+from src.app.controllers import order_controller, user_controller
+from src.app.models.errors import ConflictError, NotFoundError
+from src.app.services import order_service, user_service
+
+user_service.create_user("Ada Lovelace", "ada@example.com")
+
+
+def _id(value: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("id is invalid") from None
+    if parsed <= 0:
+        raise ValueError("id is invalid")
+    return parsed
+
+
+def _user(user) -> dict:
+    return {"id": user.id, "name": user.name, "email": user.email}
+
+
+def _order(order) -> dict:
+    items = [
+        {"product": item["product"], "quantity": item["quantity"], "unitPrice": item["unit_price"]}
+        for item in order.items
+    ]
+    return {"id": order.id, "userId": order.user_id, "items": items, "total": order.total, "status": order.status}
+
+
+def dispatch(method: str, path: str, body=None, query=None) -> dict:
+    parts = [part for part in path.strip("/").split("/") if part]
+    query = query or {}
+    try:
+        if method == "GET" and parts == ["users"]:
+            return {"status": 200, "body": [_user(user) for user in user_controller.list_users()]}
+        if method == "POST" and parts == ["users"]:
+            user = user_controller.create_user(body if isinstance(body, dict) else {})
+            return {"status": 201, "body": _user(user)}
+        if len(parts) == 2 and parts[0] == "users" and method == "GET":
+            user = user_controller.get_user(_id(parts[1]))
+            if user is None:
+                raise NotFoundError(f"user {parts[1]} not found")
+            return {"status": 200, "body": _user(user)}
+        if method == "GET" and parts == ["orders"]:
+            user_id = _id(query["userId"]) if "userId" in query else None
+            orders = order_service.list_user_orders(user_id)
+            return {"status": 200, "body": [_order(order) for order in orders]}
+        if method == "POST" and parts == ["orders"]:
+            order = order_controller.create_order(body if isinstance(body, dict) else {})
+            return {"status": 201, "body": _order(order)}
+        if len(parts) == 2 and parts[0] == "orders" and method == "GET":
+            return {"status": 200, "body": _order(order_service.require_order(_id(parts[1])))}
+        if len(parts) == 3 and parts[0] == "orders" and method == "POST":
+            order_id = _id(parts[1])
+            if parts[2] == "pay":
+                return {"status": 200, "body": _order(order_service.pay_order(order_id))}
+            if parts[2] == "cancel":
+                return {"status": 200, "body": _order(order_service.cancel_order(order_id))}
+        return {"status": 404, "body": {"error": "route not found"}}
+    except ValueError as error:
+        return {"status": 400, "body": {"error": str(error)}}
+    except NotFoundError as error:
+        return {"status": 404, "body": {"error": str(error)}}
+    except ConflictError as error:
+        return {"status": 409, "body": {"error": str(error)}}

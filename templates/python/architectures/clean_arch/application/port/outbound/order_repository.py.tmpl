@@ -1,0 +1,17 @@
+from abc import ABC, abstractmethod
+
+from src.app.domain.model.order import Order
+
+
+class OrderRepository(ABC):
+    @abstractmethod
+    def save(self, order: Order) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_by_id(self, order_id: str) -> Order | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_all(self) -> list[Order]:
+        raise NotImplementedError

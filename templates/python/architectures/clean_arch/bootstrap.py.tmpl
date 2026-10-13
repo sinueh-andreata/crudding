@@ -1,9 +1,16 @@
-from src.app.application.use_cases.register_user import RegisterUser
-from src.app.interface_adapters.controllers.user_controller import UserController
-from src.app.interface_adapters.persistence.user_repository import InMemoryUserRepository
+from src.app.application.use_cases.create_order import CreateOrder
+from src.app.application.use_cases.get_order import GetOrder
+from src.app.application.use_cases.list_orders import ListOrders
+from src.app.application.use_cases.pay_order import PayOrder
+from src.app.interface_adapters.controllers.order_controller import OrderController
+from src.app.interface_adapters.persistence.order_repository import InMemoryOrderRepository
 
 
-def build_user_controller() -> UserController:
-    repository = InMemoryUserRepository()
-    register_user = RegisterUser(repository)
-    return UserController(register_user)
+def build_order_controller() -> OrderController:
+    repository = InMemoryOrderRepository()
+    return OrderController({
+        "create": CreateOrder(repository),
+        "get": GetOrder(repository),
+        "list": ListOrders(repository),
+        "pay": PayOrder(repository),
+    })

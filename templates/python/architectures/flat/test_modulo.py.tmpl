@@ -1,5 +1,15 @@
-from src.{{.PackageName}}.modulo import get_message
+from src.{{.PackageName}}.modulo import TaskStore, dispatch
 
 
-def test_get_message():
-    assert get_message() == "Hello from crudding"
+def test_task_store_create_complete_and_remove():
+    store = TaskStore()
+    task = store.create("write tests")
+    assert task["id"] == 1
+    assert store.complete(task["id"])["done"] is True
+    assert store.remove(task["id"]) is True
+    assert store.list() == []
+
+
+def test_create_route_rejects_missing_title():
+    result = dispatch("POST", "/tasks", {})
+    assert result["status"] == 400

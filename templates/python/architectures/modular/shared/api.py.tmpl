@@ -1,0 +1,42 @@
+from src.app.catalog import views as catalog_views
+from src.app.orders import views as order_views
+from src.app.shared.errors import ConflictError, NotFoundError
+
+
+def _id(value: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("id is invalid") from None
+    if parsed <= 0:
+        raise ValueError("id is invalid")
+    return parsed
+
+
+def dispatch(method: str, path: str, body=None, query=None) -> dict:
+    parts = [part for part in path.strip("/").split("/") if part]
+    try:
+        if method == "GET" and parts == ["health"]:
+            return {"status": 200, "body": {"status": "ok"}}
+        if method == "GET" and parts == ["products"]:
+            return {"status": 200, "body": catalog_views.product_list()}
+        if method == "POST" and parts == ["products"]:
+            return {"status": 201, "body": catalog_views.create_product(body if isinstance(body, dict) else {})}
+        if len(parts) == 2 and parts[0] == "products" and method == "GET":
+            product = catalog_views.product_detail(_id(parts[1]))
+            if product is None:
+                raise NotFoundError(f"product {parts[1]} not found")
+            return {"status": 200, "body": product}
+        if method == "GET" and parts == ["orders"]:
+            return {"status": 200, "body": order_views.order_list()}
+        if method == "POST" and parts == ["orders"]:
+            return {"status": 201, "body": order_views.create_order(body if isinstance(body, dict) else {})}
+        if len(parts) == 2 and parts[0] == "orders" and method == "GET":
+            return {"status": 200, "body": order_views.order_detail(_id(parts[1]))}
+        return {"status": 404, "body": {"error": "route not found"}}
+    except ValueError as error:
+        return {"status": 400, "body": {"error": str(error)}}
+    except NotFoundError as error:
+        return {"status": 404, "body": {"error": str(error)}}
+    except ConflictError as error:
+        return {"status": 409, "body": {"error": str(error)}}

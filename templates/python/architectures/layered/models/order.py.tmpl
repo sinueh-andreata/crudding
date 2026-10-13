@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+import math
+from typing import Any
 
 
 @dataclass
@@ -6,4 +8,29 @@ class Order:
     id: int
     user_id: int
     total: float
-    items: list[str] = field(default_factory=list)
+    items: list[dict[str, Any]] = field(default_factory=list)
+    status: str = "pending"
+
+
+def parse_new_order(payload: dict) -> tuple[int, list[dict[str, Any]]]:
+    try:
+        user_id = int(payload.get("userId"))
+    except (TypeError, ValueError):
+        raise ValueError("user_id is invalid") from None
+    raw_items = payload.get("items")
+    if user_id <= 0 or not isinstance(raw_items, list) or not raw_items:
+        raise ValueError("user_id and at least one item are required")
+    items = []
+    for raw in raw_items:
+        item = raw if isinstance(raw, dict) else {}
+        product = str(item.get("product", "")).strip()
+        try:
+            quantity_value = float(item.get("quantity"))
+            unit_price = float(item.get("unitPrice"))
+        except (TypeError, ValueError):
+            raise ValueError("item quantity and unit_price are invalid") from None
+        if not product or not math.isfinite(quantity_value) or not quantity_value.is_integer() or quantity_value <= 0 or not math.isfinite(unit_price) or unit_price <= 0:
+            raise ValueError("item fields are invalid")
+        quantity = int(quantity_value)
+        items.append({"product": product, "quantity": quantity, "unit_price": unit_price})
+    return user_id, items

@@ -1,0 +1,44 @@
+import json
+import sys
+
+from django.conf import settings
+
+settings.configure(
+    DEBUG=True,
+    SECRET_KEY="development-only",
+    ROOT_URLCONF=__name__,
+    ALLOWED_HOSTS=["*"],
+    MIDDLEWARE=[],
+    INSTALLED_APPS=[],
+)
+
+import django
+
+django.setup()
+
+from django.http import HttpResponse, JsonResponse
+from django.urls import re_path
+from django.views.decorators.csrf import csrf_exempt
+
+from {{.APIModule}} import dispatch
+
+
+@csrf_exempt
+def handle(request, path=""):
+    try:
+        body = json.loads(request.body) if request.body else None
+    except json.JSONDecodeError:
+        body = None
+    result = dispatch(request.method, request.path, body, request.GET.dict())
+    if result.get("body") is None:
+        return HttpResponse(status=result["status"])
+    return JsonResponse(result["body"], status=result["status"], safe=not isinstance(result["body"], list))
+
+
+urlpatterns = [re_path(r"^(?P<path>.*)$", handle)]
+
+
+if __name__ == "__main__":
+    from django.core.management import execute_from_command_line
+
+    execute_from_command_line(sys.argv)

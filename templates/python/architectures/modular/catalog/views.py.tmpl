@@ -1,15 +1,21 @@
-from src.app.catalog.service import get_product, list_products
+from src.app.catalog.models import parse_new_product
+from src.app.catalog.service import add_product, get_product, list_products
 
 
 def product_detail(product_id: int) -> dict | None:
     product = get_product(product_id)
     if product is None:
         return None
-    return {"id": product.id, "name": product.name, "price": product.price, "stock": product.stock}
+    return {"id": product.id, "sku": product.sku, "name": product.name, "price": product.price, "stock": product.stock}
 
 
 def product_list() -> list[dict]:
     return [
-        {"id": product.id, "name": product.name, "price": product.price, "stock": product.stock}
+        {"id": product.id, "sku": product.sku, "name": product.name, "price": product.price, "stock": product.stock}
         for product in list_products()
     ]
+
+
+def create_product(payload: dict) -> dict:
+    product = add_product(*parse_new_product(payload))
+    return {"id": product.id, "sku": product.sku, "name": product.name, "price": product.price, "stock": product.stock}

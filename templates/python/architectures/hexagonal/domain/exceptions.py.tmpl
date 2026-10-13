@@ -1,3 +1,9 @@
+class InvalidProductError(ValueError):
+    pass
+
+
+class ProductNotFoundError(LookupError):
+    pass
 class DomainError(Exception):
     """Base exception for domain rule violations."""
 

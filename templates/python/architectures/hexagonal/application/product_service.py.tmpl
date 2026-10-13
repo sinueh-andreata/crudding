@@ -1,14 +1,26 @@
-from src.app.domain.entities import Product
+from uuid import uuid4
+
+from src.app.domain.entities import Product, apply_discount
+from src.app.domain.exceptions import ProductNotFoundError
 
 
 class ProductService:
     def __init__(self, repository):
         self.repository = repository
 
-    def register(self, product_id: str, name: str, price: float) -> Product:
-        if not name.strip() or price < 0:
-            raise ValueError("product name is required and price must be non-negative")
-        return self.repository.save(Product(id=product_id, name=name.strip(), price=price))
+    def list(self) -> list[Product]:
+        return self.repository.find_all()
 
-    def find(self, product_id: str) -> Product | None:
-        return self.repository.find_by_id(product_id)
+    def get(self, product_id: str) -> Product:
+        product = self.repository.find_by_id(product_id)
+        if product is None:
+            raise ProductNotFoundError(product_id)
+        return product
+
+    def create(self, name: str, price: float, stock: int = 0) -> Product:
+        product = Product(id=uuid4().hex, name=name, price=price, stock=stock)
+        return self.repository.save(product)
+
+    def apply_discount(self, product_id: str, percent: float) -> Product:
+        product = apply_discount(self.get(product_id), percent)
+        return self.repository.save(product)

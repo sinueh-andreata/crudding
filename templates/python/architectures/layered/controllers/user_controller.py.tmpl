@@ -1,9 +1,10 @@
-from src.app.models.user import User
+from src.app.models.user import User, parse_new_user
 from src.app.services import user_service
 
 
 def create_user(payload: dict[str, str]) -> User:
-    return user_service.create_user(payload["name"], payload["email"])
+    name, email = parse_new_user(payload)
+    return user_service.create_user(name, email)
 
 
 def get_user(user_id: int) -> User | None:

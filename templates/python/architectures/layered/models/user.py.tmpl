@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import re
 
 
 @dataclass
@@ -6,3 +7,13 @@ class User:
     id: int
     name: str
     email: str
+
+
+def parse_new_user(payload: dict) -> tuple[str, str]:
+    name = str(payload.get("name", "")).strip()
+    email = str(payload.get("email", "")).strip().lower()
+    if not name:
+        raise ValueError("name is required")
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise ValueError("invalid email")
+    return name, email

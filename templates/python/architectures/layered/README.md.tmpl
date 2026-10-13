@@ -7,6 +7,15 @@ Projeto Python gerado pelo crudding.
 
 Controllers, services, models e router ficam organizados em `src/app/`.
 
+## API
+
+- `GET /users`, `GET /users/{id}` e `POST /users` com `{"name": "...", "email": "..."}`.
+- `GET /orders`, `GET /orders/{id}` e `POST /orders` com `userId` e itens contendo `product`, `quantity` e `unitPrice`.
+- `GET /orders?userId={id}` filtra pedidos por usuário.
+- `POST /orders/{id}/pay` e `POST /orders/{id}/cancel` alteram o estado do pedido.
+
+Usuários e pedidos ficam em memória; o exemplo inicia com Ada Lovelace.
+
 ## Executar
 
 Instale as dependências:

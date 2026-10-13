@@ -7,6 +7,15 @@ Projeto Python gerado pelo crudding.
 
 As dependências apontam para as camadas internas; a composição da aplicação fica em `src/app/bootstrap.py`.
 
+## API
+
+- `GET /health` verifica a aplicação.
+- `GET /orders` e `GET /orders/{id}` consultam pedidos.
+- `POST /orders` cria um pedido com `customerId` e itens contendo `sku`, `quantity` e `unitPrice`.
+- `POST /orders/{id}/pay` paga um pedido pendente.
+
+O total é calculado no servidor e apresentado em BRL. A persistência é em memória.
+
 ## Executar
 
 Instale as dependências:

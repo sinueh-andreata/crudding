@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+import math
+
+from src.app.domain.exceptions import InvalidProductError
 
 
 @dataclass
@@ -13,7 +16,25 @@ class Product:
     id: str
     name: str
     price: float
+    stock: int = 0
 
     def __post_init__(self) -> None:
-        if self.price < 0:
-            raise ValueError("product price cannot be negative")
+        if len(self.name.strip()) < 3:
+            raise InvalidProductError("product name must contain at least 3 characters")
+        if not math.isfinite(self.price) or self.price <= 0:
+            raise InvalidProductError("product price must be positive")
+        if not isinstance(self.stock, int) or self.stock < 0:
+            raise InvalidProductError("product stock must be a non-negative integer")
+        object.__setattr__(self, "name", self.name.strip())
+        object.__setattr__(self, "price", round(self.price, 2))
+
+
+def apply_discount(product: Product, percent: float) -> Product:
+    if not math.isfinite(percent) or percent <= 0 or percent >= 100:
+        raise InvalidProductError("discount must be between 0 and 100")
+    return Product(
+        id=product.id,
+        name=product.name,
+        price=int(product.price * (1 - percent / 100) * 100 + 0.5) / 100,
+        stock=product.stock,
+    )

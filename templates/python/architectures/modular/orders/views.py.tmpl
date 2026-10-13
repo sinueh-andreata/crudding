@@ -1,13 +1,34 @@
-from src.app.orders.service import list_orders, place_order
+from src.app.orders.service import get_order, list_orders, place_order
 
 
 def create_order(payload: dict) -> dict:
-    order = place_order(int(payload["checkout_id"]))
-    return {"id": order.id, "checkout_id": order.checkout_id, "status": order.status}
+    items = []
+    for raw in payload.get("items", []):
+        item = raw if isinstance(raw, dict) else {}
+        try:
+            product_id_value = float(item.get("productId", 0))
+            quantity_value = float(item.get("quantity", 0))
+        except (TypeError, ValueError):
+            raise ValueError("item productId and quantity must be positive integers") from None
+        if not product_id_value.is_integer() or not quantity_value.is_integer() or product_id_value <= 0 or quantity_value <= 0:
+            raise ValueError("item productId and quantity must be positive integers")
+        product_id = int(product_id_value)
+        quantity = int(quantity_value)
+        items.append({"product_id": product_id, "quantity": quantity})
+    return present_order(place_order(items))
 
 
 def order_list() -> list[dict]:
-    return [
-        {"id": order.id, "checkout_id": order.checkout_id, "status": order.status}
-        for order in list_orders()
+    return [present_order(order) for order in list_orders()]
+
+
+def present_order(order) -> dict:
+    lines = [
+        {"productId": line["product_id"], "name": line["name"], "quantity": line["quantity"], "unitPrice": line["unit_price"]}
+        for line in order.lines
     ]
+    return {"id": order.id, "lines": lines, "total": order.total, "createdAt": order.created_at}
+
+
+def order_detail(order_id: int) -> dict:
+    return present_order(get_order(order_id))

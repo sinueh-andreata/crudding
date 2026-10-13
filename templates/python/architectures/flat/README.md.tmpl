@@ -7,6 +7,15 @@ Projeto Python gerado pelo crudding.
 
 O pacote da aplicação fica em `src/`, e os testes ficam em `tests/`.
 
+## API
+
+- `GET /tasks` e `GET /tasks/{id}`: lista e consulta tarefas.
+- `POST /tasks` com `{"title": "..."}`: cria uma tarefa.
+- `PATCH /tasks/{id}/done`: conclui uma tarefa.
+- `DELETE /tasks/{id}`: remove uma tarefa.
+
+As tarefas ficam em memória e o serviço inicia com uma tarefa de exemplo.
+
 ## Executar
 
 Instale as dependências:

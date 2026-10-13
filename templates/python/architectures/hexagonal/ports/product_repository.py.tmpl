@@ -11,3 +11,7 @@ class ProductRepository(ABC):
     @abstractmethod
     def find_by_id(self, product_id: str) -> Product | None:
         raise NotImplementedError
+
+    @abstractmethod
+    def find_all(self) -> list[Product]:
+        raise NotImplementedError

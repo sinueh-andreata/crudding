@@ -3,6 +3,7 @@ package generator
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -137,10 +138,10 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 				}
 				requiredFiles := map[string][]string{
 					"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/main.py", "tests/test_modulo.py"},
-					"layered":    {"src/app/controllers/user_controller.py", "src/app/services/greeting.py", "src/app/models/order.py", "src/app/router/router.py"},
-					"modular":    {"src/app/catalog/service.py", "src/app/checkout/models.py", "src/app/orders/views.py", "src/app/shared/__init__.py"},
-					"hexagonal":  {"src/app/domain/entities.py", "src/app/application/greeting_service.py", "src/app/ports/user_repository.py", "src/app/infrastructure/logging_adapter.py", "src/app/routers/user.py", "src/app/main.py"},
-					"clean_arch": {"src/app/domain/model/user.py", "src/app/application/use_cases/register_user.py", "src/app/application/port/outbound/register_user_port.py", "src/app/interface_adapters/controllers/user_controller.py", "src/app/frameworks_and_drivers/web/main.py", "src/app/bootstrap.py"},
+					"layered":    {"src/app/controllers/user_controller.py", "src/app/models/errors.py", "src/app/models/order.py", "src/app/router/api.py", "src/app/router/router.py"},
+					"modular":    {"src/app/catalog/service.py", "src/app/orders/views.py", "src/app/shared/api.py", "src/app/shared/errors.py"},
+					"hexagonal":  {"src/app/domain/entities.py", "src/app/application/product_service.py", "src/app/ports/product_repository.py", "src/app/infrastructure/in_memory_product_repository.py", "src/app/routers/api.py", "src/app/main.py"},
+					"clean_arch": {"src/app/domain/model/order.py", "src/app/application/use_cases/create_order.py", "src/app/application/use_cases/pay_order.py", "src/app/application/port/outbound/order_repository.py", "src/app/interface_adapters/controllers/order_controller.py", "src/app/frameworks_and_drivers/web/api.py", "src/app/bootstrap.py"},
 				}
 				for _, requiredFile := range requiredFiles[config.Architecture] {
 					if _, err := os.Stat(filepath.Join(destination, requiredFile)); err != nil {
@@ -149,7 +150,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 				}
 				if config.Architecture == "flat" {
 					testContents, err := os.ReadFile(filepath.Join(destination, "tests/test_modulo.py"))
-					if err != nil || !strings.Contains(string(testContents), "def test_get_message") {
+					if err != nil || !strings.Contains(string(testContents), "def test_task_store_create_complete_and_remove") {
 						t.Errorf("teste do módulo flat não foi gerado corretamente: %v", err)
 					}
 				}
@@ -157,11 +158,11 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 					path    string
 					snippet string
 				}{
-					"flat":       {"src/sample/modulo.py", "def get_message"},
-					"layered":    {"src/app/services/user_service.py", "def create_user"},
+					"flat":       {"src/sample/modulo.py", "class TaskStore"},
+					"layered":    {"src/app/router/api.py", "def dispatch"},
 					"modular":    {"src/app/catalog/service.py", "def add_product"},
-					"hexagonal":  {"src/app/ports/user_repository.py", "class UserRepository(ABC)"},
-					"clean_arch": {"src/app/application/use_cases/register_user.py", "class RegisterUser"},
+					"hexagonal":  {"src/app/routers/api.py", "def dispatch"},
+					"clean_arch": {"src/app/application/use_cases/create_order.py", "class CreateOrder"},
 				}
 				codeCheck := codeChecks[config.Architecture]
 				code, err := os.ReadFile(filepath.Join(destination, codeCheck.path))
@@ -189,6 +190,83 @@ func TestGenerateRefusesExistingDirectory(t *testing.T) {
 	content, err := os.ReadFile(marker)
 	if err != nil || string(content) != "keep" {
 		t.Fatalf("existing content changed: %q, %v", content, err)
+	}
+}
+
+func TestPythonDispatchersMatchNodeDemos(t *testing.T) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("python3 is not installed")
+	}
+	templates := os.DirFS(filepath.Join("..", ".."))
+	cases := []struct {
+		architecture string
+		script       string
+	}{
+		{"flat", `from src.sample.modulo import dispatch
+created = dispatch("POST", "/tasks", {"title": "test"})["body"]
+assert created["done"] is False and "createdAt" in created
+assert dispatch("PATCH", f"/tasks/{created['id']}/done")["body"]["done"] is True
+assert dispatch("DELETE", f"/tasks/{created['id']}")["status"] == 204`},
+		{"layered", `from src.app.router.api import dispatch
+assert dispatch("GET", "/users")["body"][0]["email"] == "ada@example.com"
+order = dispatch("POST", "/orders", {"userId": 1, "items": [{"product": "book", "quantity": 2, "unitPrice": 3.25}]})
+assert order["status"] == 201 and order["body"]["total"] == 6.5
+assert dispatch("GET", "/orders", query={"userId": "1"})["body"][0]["id"] == order["body"]["id"]
+assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["body"]["status"] == "paid"
+assert dispatch("POST", f"/orders/{order['body']['id']}/cancel")["status"] == 409`},
+		{"modular", `from src.app.shared.api import dispatch
+assert dispatch("GET", "/health")["body"] == {"status": "ok"}
+order = dispatch("POST", "/orders", {"items": [{"productId": 1, "quantity": 2}]})
+assert order["status"] == 201 and order["body"]["total"] == 900
+assert dispatch("GET", "/products/1")["body"]["stock"] == 8`},
+		{"hexagonal", `from src.app.routers.api import dispatch
+product = dispatch("GET", "/products")["body"][0]
+discounted = dispatch("POST", f"/products/{product['id']}/discount", {"percent": 10})
+assert discounted["status"] == 200 and discounted["body"]["price"] == 288
+assert dispatch("POST", f"/products/{product['id']}/discount", {"percent": 100})["status"] == 422`},
+		{"clean_arch", `from src.app.frameworks_and_drivers.web.api import dispatch
+order = dispatch("POST", "/orders", {"customerId": "customer-1", "items": [{"sku": "SKU-1", "quantity": 2, "unitPrice": 12.5}]})
+assert order["status"] == 201 and order["body"]["total"] == {"amount": 25.0, "formatted": "R$ 25,00"}
+assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["body"]["status"] == "paid"
+assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["status"] == 409`},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.architecture, func(t *testing.T) {
+			destination := filepath.Join(t.TempDir(), "Sample")
+			config := types.ProjectConfig{ProjectName: "Sample", Language: "python", Framework: "raw", Architecture: testCase.architecture}
+			if err := Generate(destination, config, templates); err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			command := exec.Command(python, "-c", testCase.script)
+			command.Dir = destination
+			command.Env = append(os.Environ(), "PYTHONPATH="+destination)
+			if output, err := command.CombinedOutput(); err != nil {
+				t.Fatalf("generated Python demo failed: %v\n%s", err, output)
+			}
+		})
+	}
+}
+
+func TestPythonFrameworkEntrypointsCompile(t *testing.T) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("python3 is not installed")
+	}
+	templates := os.DirFS(filepath.Join("..", ".."))
+	for _, framework := range []string{"raw", "fastapi", "django", "flask"} {
+		t.Run(framework, func(t *testing.T) {
+			destination := filepath.Join(t.TempDir(), "Sample")
+			config := types.ProjectConfig{ProjectName: "Sample", Language: "python", Framework: framework, Architecture: "flat"}
+			if err := Generate(destination, config, templates); err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			command := exec.Command(python, "-m", "compileall", "-q", destination)
+			if output, err := command.CombinedOutput(); err != nil {
+				t.Fatalf("generated %s entrypoint does not compile: %v\n%s", framework, err, output)
+			}
+		})
 	}
 }
 

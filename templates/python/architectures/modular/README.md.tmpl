@@ -7,6 +7,14 @@ Projeto Python gerado pelo crudding.
 
 Cada feature tem seus modelos, serviços e views em `src/app/`; `shared/` contém recursos comuns.
 
+## API
+
+- `GET /health` verifica a aplicação.
+- `GET /products`, `GET /products/{id}` e `POST /products` cadastram e consultam catálogo (`sku`, `name`, `price` e `stock`).
+- `GET /orders`, `GET /orders/{id}` e `POST /orders` criam pedidos com itens `productId` e `quantity`.
+
+O pedido reserva estoque e calcula o total com os preços do catálogo. Os dados ficam em memória.
+
 ## Executar
 
 Instale as dependências:

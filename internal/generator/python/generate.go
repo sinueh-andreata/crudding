@@ -19,6 +19,7 @@ type templateData struct {
 	EntryModule   string
 	EntryScript   string
 	ServiceModule string
+	APIModule     string
 	PackageName   string
 }
 
@@ -33,21 +34,24 @@ type layout struct {
 	serviceDir      string
 	serviceFile     string
 	serviceTemplate string
+	apiDir          string
+	apiTemplate     string
 	directories     []string
 	components      []component
 }
 
 var layouts = map[string]layout{
 	"flat": {
-		entryFile:   "main.py",
-		serviceFile: "modulo.py",
-		directories: []string{"tests"},
+		entryFile:       "main.py",
+		serviceFile:     "modulo.py",
+		serviceTemplate: "templates/python/architectures/flat/modulo.py.tmpl",
+		directories:     []string{"tests"},
 	},
 	"layered": {
 		entryDir:    "src/app/router",
 		entryFile:   "router.py",
-		serviceDir:  "src/app/services",
-		serviceFile: "greeting.py",
+		apiDir:      "src/app/router",
+		apiTemplate: "templates/python/architectures/layered/router/api.py.tmpl",
 		directories: []string{"src/app/controllers", "src/app/services", "src/app/models", "src/app/router"},
 		components: []component{
 			{"src/app/controllers/user_controller.py", "templates/python/architectures/layered/controllers/user_controller.py.tmpl"},
@@ -56,67 +60,58 @@ var layouts = map[string]layout{
 			{"src/app/services/order_service.py", "templates/python/architectures/layered/services/order_service.py.tmpl"},
 			{"src/app/models/user.py", "templates/python/architectures/layered/models/user.py.tmpl"},
 			{"src/app/models/order.py", "templates/python/architectures/layered/models/order.py.tmpl"},
+			{"src/app/models/errors.py", "templates/python/architectures/layered/models/errors.py.tmpl"},
 		},
 	},
 	"modular": {
-		entryDir:        "src/app",
-		entryFile:       "main.py",
-		serviceDir:      "src/app/catalog",
-		serviceFile:     "service.py",
-		serviceTemplate: "templates/python/architectures/modular/catalog/service.py.tmpl",
-		directories:     []string{"src/app/catalog", "src/app/checkout", "src/app/orders", "src/app/shared"},
+		entryDir:    "src/app",
+		entryFile:   "main.py",
+		apiDir:      "src/app/shared",
+		apiTemplate: "templates/python/architectures/modular/shared/api.py.tmpl",
+		directories: []string{"src/app/catalog", "src/app/orders", "src/app/shared"},
 		components: []component{
 			{"src/app/catalog/models.py", "templates/python/architectures/modular/catalog/models.py.tmpl"},
 			{"src/app/catalog/views.py", "templates/python/architectures/modular/catalog/views.py.tmpl"},
-			{"src/app/checkout/models.py", "templates/python/architectures/modular/checkout/models.py.tmpl"},
-			{"src/app/checkout/service.py", "templates/python/architectures/modular/checkout/service.py.tmpl"},
-			{"src/app/checkout/views.py", "templates/python/architectures/modular/checkout/views.py.tmpl"},
+			{"src/app/catalog/service.py", "templates/python/architectures/modular/catalog/service.py.tmpl"},
 			{"src/app/orders/models.py", "templates/python/architectures/modular/orders/models.py.tmpl"},
 			{"src/app/orders/service.py", "templates/python/architectures/modular/orders/service.py.tmpl"},
 			{"src/app/orders/views.py", "templates/python/architectures/modular/orders/views.py.tmpl"},
+			{"src/app/shared/errors.py", "templates/python/architectures/modular/shared/errors.py.tmpl"},
 		},
 	},
 	"hexagonal": {
 		entryDir:    "src/app",
 		entryFile:   "main.py",
-		serviceDir:  "src/app/application",
-		serviceFile: "greeting_service.py",
+		apiDir:      "src/app/routers",
+		apiTemplate: "templates/python/architectures/hexagonal/routers/api.py.tmpl",
 		directories: []string{"src/app/domain", "src/app/application", "src/app/ports", "src/app/infrastructure", "src/app/routers"},
 		components: []component{
-			{"src/app/domain/aggregates.py", "templates/python/architectures/hexagonal/domain/aggregates.py.tmpl"},
 			{"src/app/domain/entities.py", "templates/python/architectures/hexagonal/domain/entities.py.tmpl"},
-			{"src/app/domain/value_objects.py", "templates/python/architectures/hexagonal/domain/value_objects.py.tmpl"},
 			{"src/app/domain/exceptions.py", "templates/python/architectures/hexagonal/domain/exceptions.py.tmpl"},
-			{"src/app/application/user_service.py", "templates/python/architectures/hexagonal/application/user_service.py.tmpl"},
 			{"src/app/application/product_service.py", "templates/python/architectures/hexagonal/application/product_service.py.tmpl"},
-			{"src/app/ports/user_repository.py", "templates/python/architectures/hexagonal/ports/user_repository.py.tmpl"},
 			{"src/app/ports/product_repository.py", "templates/python/architectures/hexagonal/ports/product_repository.py.tmpl"},
-			{"src/app/ports/logger_port.py", "templates/python/architectures/hexagonal/ports/logger_port.py.tmpl"},
-			{"src/app/infrastructure/dynamodb_user_repository.py", "templates/python/architectures/hexagonal/infrastructure/dynamodb_user_repository.py.tmpl"},
-			{"src/app/infrastructure/postgres_product_repository.py", "templates/python/architectures/hexagonal/infrastructure/postgres_product_repository.py.tmpl"},
-			{"src/app/infrastructure/logging_adapter.py", "templates/python/architectures/hexagonal/infrastructure/logging_adapter.py.tmpl"},
-			{"src/app/routers/user.py", "templates/python/architectures/hexagonal/routers/user.py.tmpl"},
+			{"src/app/infrastructure/in_memory_product_repository.py", "templates/python/architectures/hexagonal/infrastructure/in_memory_product_repository.py.tmpl"},
 			{"src/app/routers/product.py", "templates/python/architectures/hexagonal/routers/product.py.tmpl"},
 		},
 	},
 	"clean_arch": {
-		entryDir:        "src/app/frameworks_and_drivers/web",
-		entryFile:       "main.py",
-		serviceDir:      "src/app/application/use_cases",
-		serviceFile:     "greeting.py",
-		serviceTemplate: "templates/python/architectures/clean_arch/application/use_cases/greeting.py.tmpl",
-		directories:     []string{"src/app/domain/model", "src/app/application/use_cases", "src/app/application/port/outbound", "src/app/interface_adapters/controllers", "src/app/interface_adapters/presenters", "src/app/interface_adapters/persistence", "src/app/frameworks_and_drivers/database", "src/app/frameworks_and_drivers/web"},
+		entryDir:    "src/app/frameworks_and_drivers/web",
+		entryFile:   "main.py",
+		apiDir:      "src/app/frameworks_and_drivers/web",
+		apiTemplate: "templates/python/architectures/clean_arch/frameworks_and_drivers/web/api.py.tmpl",
+		directories: []string{"src/app/domain/model", "src/app/application/use_cases", "src/app/application/port/outbound", "src/app/interface_adapters/controllers", "src/app/interface_adapters/presenters", "src/app/interface_adapters/persistence", "src/app/frameworks_and_drivers/database", "src/app/frameworks_and_drivers/web"},
 		components: []component{
-			{"src/app/domain/model/user.py", "templates/python/architectures/clean_arch/domain/model/user.py.tmpl"},
-			{"src/app/domain/model/email.py", "templates/python/architectures/clean_arch/domain/model/email.py.tmpl"},
 			{"src/app/domain/exceptions.py", "templates/python/architectures/clean_arch/domain/exceptions.py.tmpl"},
-			{"src/app/application/use_cases/register_user.py", "templates/python/architectures/clean_arch/application/use_cases/register_user.py.tmpl"},
-			{"src/app/application/use_cases/change_password.py", "templates/python/architectures/clean_arch/application/use_cases/change_password.py.tmpl"},
-			{"src/app/application/port/outbound/register_user_port.py", "templates/python/architectures/clean_arch/application/port/outbound/register_user_port.py.tmpl"},
-			{"src/app/interface_adapters/controllers/user_controller.py", "templates/python/architectures/clean_arch/interface_adapters/controllers/user_controller.py.tmpl"},
-			{"src/app/interface_adapters/presenters/user_presenter.py", "templates/python/architectures/clean_arch/interface_adapters/presenters/user_presenter.py.tmpl"},
-			{"src/app/interface_adapters/persistence/user_repository.py", "templates/python/architectures/clean_arch/interface_adapters/persistence/user_repository.py.tmpl"},
-			{"src/app/frameworks_and_drivers/database/config.py", "templates/python/architectures/clean_arch/frameworks_and_drivers/database/config.py.tmpl"},
+			{"src/app/domain/model/order.py", "templates/python/architectures/clean_arch/domain/model/order.py.tmpl"},
+			{"src/app/application/port/outbound/order_repository.py", "templates/python/architectures/clean_arch/application/port/outbound/order_repository.py.tmpl"},
+			{"src/app/application/use_cases/order_output.py", "templates/python/architectures/clean_arch/application/use_cases/order_output.py.tmpl"},
+			{"src/app/application/use_cases/create_order.py", "templates/python/architectures/clean_arch/application/use_cases/create_order.py.tmpl"},
+			{"src/app/application/use_cases/get_order.py", "templates/python/architectures/clean_arch/application/use_cases/get_order.py.tmpl"},
+			{"src/app/application/use_cases/list_orders.py", "templates/python/architectures/clean_arch/application/use_cases/list_orders.py.tmpl"},
+			{"src/app/application/use_cases/pay_order.py", "templates/python/architectures/clean_arch/application/use_cases/pay_order.py.tmpl"},
+			{"src/app/interface_adapters/controllers/order_controller.py", "templates/python/architectures/clean_arch/interface_adapters/controllers/order_controller.py.tmpl"},
+			{"src/app/interface_adapters/presenters/order_presenter.py", "templates/python/architectures/clean_arch/interface_adapters/presenters/order_presenter.py.tmpl"},
+			{"src/app/interface_adapters/persistence/order_repository.py", "templates/python/architectures/clean_arch/interface_adapters/persistence/order_repository.py.tmpl"},
 			{"src/app/bootstrap.py", "templates/python/architectures/clean_arch/bootstrap.py.tmpl"},
 		},
 	},
@@ -143,6 +138,7 @@ func Generate(destination string, config types.ProjectConfig, templates fs.FS) (
 		layout.entryDir = filepath.ToSlash(filepath.Join("src", packageName))
 		layout.serviceDir = layout.entryDir
 		layout.directories = append(layout.directories, layout.entryDir)
+		layout.apiDir = layout.entryDir
 	}
 	root, err := common.CreateProjectDirectory(destination)
 	if err != nil {
@@ -161,7 +157,14 @@ func Generate(destination string, config types.ProjectConfig, templates fs.FS) (
 		}
 	}
 	entryScript := filepath.ToSlash(filepath.Join(layout.entryDir, layout.entryFile))
-	servicePath := filepath.ToSlash(filepath.Join(layout.serviceDir, layout.serviceFile))
+	servicePath := ""
+	if layout.serviceFile != "" {
+		servicePath = filepath.ToSlash(filepath.Join(layout.serviceDir, layout.serviceFile))
+	}
+	apiPath := ""
+	if layout.apiTemplate != "" {
+		apiPath = filepath.ToSlash(filepath.Join(layout.apiDir, "api.py"))
+	}
 	data := templateData{
 		ProjectName:   strings.ReplaceAll(filepath.Base(root), "_", "-"),
 		Framework:     config.Framework,
@@ -169,19 +172,27 @@ func Generate(destination string, config types.ProjectConfig, templates fs.FS) (
 		EntryScript:   entryScript,
 		EntryModule:   pythonModule(entryScript),
 		ServiceModule: pythonModule(servicePath),
+		APIModule:     pythonModule(apiPath),
 		PackageName:   strings.TrimPrefix(strings.TrimPrefix(filepath.ToSlash(layout.entryDir), "src/"), "src/app/"),
-	}
-	serviceTemplate := layout.serviceTemplate
-	if serviceTemplate == "" {
-		serviceTemplate = "templates/python/base/greeting.py.tmpl"
 	}
 	files := []common.File{
 		{TemplatePath: fmt.Sprintf("templates/python/architectures/%s/README.md.tmpl", config.Architecture), OutputPath: "README.md"},
 		{TemplatePath: "templates/python/base/requirements.txt.tmpl", OutputPath: "requirements.txt"},
 		{TemplatePath: "templates/python/base/.gitignore.tmpl", OutputPath: ".gitignore"},
 		{TemplatePath: "templates/python/base/pyproject.toml.tmpl", OutputPath: "pyproject.toml"},
-		{TemplatePath: serviceTemplate, OutputPath: servicePath},
-		{TemplatePath: fmt.Sprintf("templates/python/architectures/%s/frameworks/%s/main.py.tmpl", config.Architecture, config.Framework), OutputPath: entryScript},
+		{TemplatePath: fmt.Sprintf("templates/python/frameworks/%s/main.py.tmpl", config.Framework), OutputPath: entryScript},
+	}
+	if servicePath != "" {
+		serviceTemplate := layout.serviceTemplate
+		if serviceTemplate == "" {
+			serviceTemplate = "templates/python/base/greeting.py.tmpl"
+		}
+		files = append(files, common.File{TemplatePath: serviceTemplate, OutputPath: servicePath})
+	}
+	if apiPath != "" {
+		files = append(files, common.File{TemplatePath: layout.apiTemplate, OutputPath: apiPath})
+	} else {
+		data.APIModule = pythonModule(servicePath)
 	}
 	if config.Architecture == "flat" {
 		files = append(files, common.File{TemplatePath: "templates/python/architectures/flat/setup.py.tmpl", OutputPath: "setup.py"}, common.File{TemplatePath: "templates/python/architectures/flat/test_modulo.py.tmpl", OutputPath: "tests/test_modulo.py"})

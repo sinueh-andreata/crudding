@@ -7,6 +7,14 @@ Projeto Python gerado pelo crudding.
 
 O domínio e a aplicação dependem de ports; adapters de entrada e saída ficam separados em `src/app/`.
 
+## API
+
+- `GET /health` verifica a aplicação.
+- `GET /products`, `GET /products/{id}` e `POST /products` consultam e cadastram produtos (`name`, `price` e `stock`).
+- `POST /products/{id}/discount` com `{"percent": 10}` aplica um desconto percentual.
+
+O exemplo conecta a porta de repositório a um adaptador em memória.
+
 ## Executar
 
 Instale as dependências:
