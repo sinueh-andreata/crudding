@@ -1,3 +1,10 @@
 module {{.GoModule}}
 
 go 1.27
+{{if eq .Framework "gin"}}
+require github.com/gin-gonic/gin v1.10.0
+{{else if eq .Framework "fiber"}}
+require github.com/gofiber/fiber/v2 v2.52.5
+{{else if eq .Framework "chi"}}
+require github.com/go-chi/chi/v5 v5.1.0
+{{end}}

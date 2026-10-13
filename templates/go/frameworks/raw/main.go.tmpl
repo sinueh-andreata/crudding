@@ -1,0 +1,13 @@
+package main
+
+import (
+	"log"
+	"net/http"
+{{if .HandlerImport}}	{{.HandlerImport}}
+{{end}})
+
+func main() {
+	handler := {{.HandlerExpr}}
+	log.Println("Servidor HTTP rodando em http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", handler))
+}

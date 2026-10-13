@@ -6,11 +6,11 @@ Projeto Go estruturado utilizando a **Modular Architecture** (*Package by Featur
 
 ## 🏛️ O que é a Modular Architecture?
 
-A **Modular Architecture** organiza o código em torno de funcionalidades e contextos de domínio (`order`, `user`) em vez de camadas técnicas globais.
+A **Modular Architecture** organiza o código em torno de funcionalidades e contextos de domínio (`catalog`, `order`) em vez de camadas técnicas globais.
 
 ### Princípios Chave:
 1. **Camada de Router (`internal/router`)**:
-   - Centraliza o registro e roteamento dos endpoints expostos por todos os módulos (`order`, `user`), permitindo que o `cmd/api/main.go` apenas chame o setup do router e inicialize o servidor.
+   - Centraliza o registro e roteamento dos endpoints expostos pelos módulos (`catalog`, `order`), permitindo que o `cmd/api/main.go` apenas chame o setup do router e inicialize o servidor.
 2. **Alta Coesão Vertical**:
    - Cada módulo (ex: `internal/order`) encapsula suas entidades (`order.go`), endpoints (`handler.go`) e regras de aplicação (`service.go`).
 3. **Baixo Acoplamento**:
@@ -40,14 +40,12 @@ A **Modular Architecture** organiza o código em torno de funcionalidades e cont
 │   │   ├── order.go            # Entidades e tipos
 │   │   ├── handler.go          # Handlers HTTP
 │   │   └── service.go          # Regras de negócio e dados
-│   ├── user/                   # Módulo de Usuários
-│   │   ├── user.go             # Entidades e tipos
-│   │   └── handler.go          # Handlers HTTP e dados
+   │   ├── product/                # Catálogo de produtos
+   │   │   ├── product.go          # Entidade e tipos
+   │   │   └── service.go          # Catálogo e reserva de estoque
 │   └── platform/               # Utilitários compartilhados de infraestrutura
 │       ├── database/           # Conexão e pooling de dados
 │       │   └── database.go
-│       └── auth/               # Validação de credenciais e tokens
-│           └── auth.go
 ├── go.mod                      # Módulo Go
 ├── go.sum                      # Checksums de dependências
 ├── .gitignore                  # Arquivos ignorados pelo Git
@@ -55,6 +53,14 @@ A **Modular Architecture** organiza o código em torno de funcionalidades e cont
 ```
 
 ---
+
+## API
+
+- `GET /health` verifica a aplicação.
+- `GET /products`, `GET /products/{id}` e `POST /products` gerenciam o catálogo (`sku`, `name`, `price`, `stock`).
+- `GET /orders`, `GET /orders/{id}` e `POST /orders` gerenciam pedidos com itens `productId` e `quantity`.
+
+O pedido reserva estoque e calcula o total com os preços do catálogo. Os dados ficam em memória.
 
 ## 🚀 Como Executar
 

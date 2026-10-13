@@ -1,6 +1,13 @@
 package http
 
 import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strings"
+
+	"{{.GoModule}}/internal/adapters/postgres"
+	"{{.GoModule}}/internal/application"
 	"{{.GoModule}}/internal/domain"
 	"{{.GoModule}}/internal/ports"
 )
@@ -18,5 +25,74 @@ func NewHandler(service ports.ProductService) *Handler {
 // GetProducts recupera os produtos através da porta do serviço.
 func (h *Handler) GetProducts() ([]domain.Product, error) {
 	return h.service.ListProducts()
+}
+
+func NewAPI() http.Handler {
+	return NewHandler(application.NewService(postgres.New()))
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	write := func(status int, value any) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		if value != nil {
+			_ = json.NewEncoder(w).Encode(value)
+		}
+	}
+	switch {
+	case r.Method == http.MethodGet && len(parts) == 1 && parts[0] == "health":
+		write(http.StatusOK, map[string]string{"status": "ok"})
+	case r.Method == http.MethodGet && len(parts) == 1 && parts[0] == "products":
+		products, err := h.service.ListProducts()
+		if err != nil {
+			write(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		write(http.StatusOK, products)
+	case r.Method == http.MethodPost && len(parts) == 1 && parts[0] == "products":
+		var input struct {
+			Name  string  `json:"name"`
+			Price float64 `json:"price"`
+			Stock int     `json:"stock"`
+		}
+		if json.NewDecoder(r.Body).Decode(&input) != nil {
+			write(http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+		product, err := h.service.CreateProduct(input.Name, input.Price, input.Stock)
+		if err != nil {
+			write(http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+			return
+		}
+		write(http.StatusCreated, product)
+	case len(parts) == 2 && parts[0] == "products" && r.Method == http.MethodGet:
+		product, err := h.service.GetProduct(parts[1])
+		if err != nil {
+			write(http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
+		write(http.StatusOK, product)
+	case len(parts) == 3 && parts[0] == "products" && parts[2] == "discount" && r.Method == http.MethodPost:
+		var input struct {
+			Percent float64 `json:"percent"`
+		}
+		if json.NewDecoder(r.Body).Decode(&input) != nil {
+			write(http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+		product, err := h.service.ApplyDiscount(parts[1], input.Percent)
+		if err != nil {
+			status := http.StatusUnprocessableEntity
+			if errors.Is(err, domain.ErrProductNotFound) {
+				status = http.StatusNotFound
+			}
+			write(status, map[string]string{"error": err.Error()})
+			return
+		}
+		write(http.StatusOK, product)
+	default:
+		write(http.StatusNotFound, map[string]string{"error": "route not found"})
+	}
 }
 

@@ -5,5 +5,7 @@ import "{{.GoModule}}/internal/domain"
 // ProductRepository define a Driven Port (porta secundária) para persistência.
 type ProductRepository interface {
 	FindAll() ([]domain.Product, error)
+	FindByID(id string) (domain.Product, bool)
+	Save(product domain.Product) error
 }
 

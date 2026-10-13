@@ -1,12 +1,59 @@
 package domain
 
-import "time"
+import (
+	"math"
+	"strings"
+	"time"
+)
 
-// Order é a entidade de domínio central.
+type OrderItem struct {
+	SKU       string  `json:"sku"`
+	Quantity  int     `json:"quantity"`
+	UnitPrice float64 `json:"unitPrice"`
+}
+
 type Order struct {
-	ID        string    `json:"id"`
-	Item      string    `json:"item"`
-	Amount    float64   `json:"amount"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         string      `json:"id"`
+	CustomerID string      `json:"customerId"`
+	Items      []OrderItem `json:"items"`
+	Status     string      `json:"status"`
+	CreatedAt  time.Time   `json:"createdAt"`
+}
+
+func NewOrder(id, customerID string, items []OrderItem) (*Order, error) {
+	if strings.TrimSpace(customerID) == "" || len(items) == 0 {
+		return nil, ErrInvalidOrder
+	}
+	copied := append([]OrderItem(nil), items...)
+	for _, item := range copied {
+		if strings.TrimSpace(item.SKU) == "" || item.Quantity <= 0 || item.UnitPrice <= 0 || math.IsNaN(item.UnitPrice) || math.IsInf(item.UnitPrice, 0) {
+			return nil, ErrInvalidOrder
+		}
+	}
+	return &Order{ID: id, CustomerID: strings.TrimSpace(customerID), Items: copied, Status: "pending", CreatedAt: time.Now().UTC()}, nil
+}
+
+func (o *Order) Total() float64 {
+	total := 0.0
+	for _, item := range o.Items {
+		total += float64(item.Quantity) * item.UnitPrice
+	}
+	return math.Round(total*100) / 100
+}
+
+func (o *Order) Pay() error {
+	if o.Status != "pending" {
+		return ErrConflict
+	}
+	o.Status = "paid"
+	return nil
+}
+
+func (o *Order) Cancel() error {
+	if o.Status == "paid" {
+		return ErrConflict
+	}
+	o.Status = "cancelled"
+	return nil
 }
 

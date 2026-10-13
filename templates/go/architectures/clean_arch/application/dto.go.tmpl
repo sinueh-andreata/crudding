@@ -1,18 +1,24 @@
 package application
 
-import "time"
+import (
+	"time"
+
+	"{{.GoModule}}/internal/domain"
+)
 
 // CreateOrderInput define os parâmetros necessários para criação de um pedido.
 type CreateOrderInput struct {
-	Item   string  `json:"item"`
-	Amount float64 `json:"amount"`
+	CustomerID string             `json:"customerId"`
+	Items      []domain.OrderItem `json:"items"`
 }
 
 // OrderOutput representa o retorno estruturado de um pedido processado.
 type OrderOutput struct {
-	ID        string    `json:"id"`
-	Item      string    `json:"item"`
-	Amount    float64   `json:"amount"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         string             `json:"id"`
+	CustomerID string             `json:"customerId"`
+	Items      []domain.OrderItem `json:"items"`
+	Total      float64            `json:"total"`
+	Status     string             `json:"status"`
+	CreatedAt  time.Time          `json:"createdAt"`
 }
 

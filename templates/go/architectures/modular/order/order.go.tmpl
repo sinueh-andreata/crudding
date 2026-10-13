@@ -2,12 +2,22 @@ package order
 
 import "time"
 
-// Order representa a entidade central do módulo de pedidos.
+type ItemInput struct {
+	ProductID int `json:"productId"`
+	Quantity  int `json:"quantity"`
+}
+
+type OrderLine struct {
+	ProductID int     `json:"productId"`
+	Name      string  `json:"name"`
+	Quantity  int     `json:"quantity"`
+	UnitPrice float64 `json:"unitPrice"`
+}
+
 type Order struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Total     float64   `json:"total"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int         `json:"id"`
+	Lines     []OrderLine `json:"lines"`
+	Total     float64     `json:"total"`
+	CreatedAt time.Time   `json:"createdAt"`
 }
 

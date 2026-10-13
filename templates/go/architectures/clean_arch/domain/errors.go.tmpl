@@ -3,10 +3,8 @@ package domain
 import "errors"
 
 var (
-	// ErrInvalidAmount ocorre quando o valor do pedido não é positivo.
-	ErrInvalidAmount = errors.New("o valor do pedido deve ser maior que zero")
-
-	// ErrEmptyItem ocorre quando o item do pedido está em branco.
-	ErrEmptyItem = errors.New("o nome do item não pode estar em branco")
+	ErrInvalidOrder  = errors.New("order is invalid")
+	ErrOrderNotFound = errors.New("order not found")
+	ErrConflict      = errors.New("order state conflict")
 )
 

@@ -22,14 +22,22 @@ A **Flat Architecture** é o padrão mais simples e direto no ecossistema Go. Em
 ├── go.mod          # Definição do módulo Go
 ├── go.sum          # Checksums de dependências
 ├── main.go         # Ponto de entrada e configuração do servidor HTTP ({{.Framework}})
-├── parse.go        # Lógica de parsing, validação e modelos locais
-├── parse_test.go   # Testes unitários do parser
-├── report.go       # Lógica de formatação e geração de relatórios
+├── tasks.go        # Store em memória, validação e endpoints de tarefas
+├── tasks_test.go   # Testes do ciclo de vida das tarefas
 ├── .gitignore      # Arquivos ignorados pelo Git
 └── README.md       # Documentação da arquitetura
 ```
 
 ---
+
+## API
+
+- `GET /tasks` e `GET /tasks/{id}` listam e consultam tarefas.
+- `POST /tasks` com `{"title":"..."}` cria uma tarefa.
+- `PATCH /tasks/{id}/done` conclui uma tarefa.
+- `DELETE /tasks/{id}` remove uma tarefa.
+
+A API inicia com uma tarefa de exemplo e mantém os dados em memória.
 
 ## 🚀 Como Executar
 

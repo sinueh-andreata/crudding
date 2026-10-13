@@ -1,8 +1,15 @@
 package http
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	stdhttp "net/http"
+	"strings"
+
 	"{{.GoModule}}/internal/application"
 	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/infrastructure/persistence"
 )
 
 // OrderHandler gerencia os endpoints HTTP de pedidos.
@@ -18,5 +25,61 @@ func NewOrderHandler(useCase *application.CreateOrderUseCase) *OrderHandler {
 // ListOrders retorna a lista de pedidos obtida via caso de uso.
 func (h *OrderHandler) ListOrders() ([]domain.Order, error) {
 	return h.useCase.ListOrders()
+}
+
+func NewAPI() stdhttp.Handler {
+	repository := persistence.New()
+	return NewOrderHandler(application.NewCreateOrderUseCase(repository))
+}
+
+func (h *OrderHandler) ServeHTTP(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	write := func(status int, value any) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		if value != nil { _ = json.NewEncoder(w).Encode(value) }
+	}
+	switch {
+	case r.Method == stdhttp.MethodGet && len(parts) == 1 && parts[0] == "health":
+		write(stdhttp.StatusOK, map[string]string{"status": "ok"})
+	case r.Method == stdhttp.MethodGet && len(parts) == 1 && parts[0] == "orders":
+		orders, err := h.ListOrders()
+		if err != nil { write(stdhttp.StatusInternalServerError, map[string]string{"error": err.Error()}); return }
+		results := make([]map[string]any, 0, len(orders))
+		for index := range orders { results = append(results, presentOrder(&orders[index])) }
+		write(stdhttp.StatusOK, results)
+	case r.Method == stdhttp.MethodPost && len(parts) == 1 && parts[0] == "orders":
+		var input application.CreateOrderInput
+		if json.NewDecoder(r.Body).Decode(&input) != nil { write(stdhttp.StatusBadRequest, map[string]string{"error": "invalid JSON"}); return }
+		order, err := h.useCase.Execute(input)
+		if err != nil { write(stdhttp.StatusUnprocessableEntity, map[string]string{"error": err.Error()}); return }
+		write(stdhttp.StatusCreated, presentOutput(order))
+	case len(parts) == 2 && parts[0] == "orders" && r.Method == stdhttp.MethodGet:
+		order, err := h.useCase.GetOrder(parts[1])
+		if err != nil { write(stdhttp.StatusNotFound, map[string]string{"error": err.Error()}); return }
+		write(stdhttp.StatusOK, presentOutput(order))
+	case len(parts) == 3 && parts[0] == "orders" && parts[2] == "pay" && r.Method == stdhttp.MethodPost:
+		order, err := h.useCase.PayOrder(parts[1])
+		if err != nil { status := stdhttp.StatusNotFound; if errors.Is(err, domain.ErrConflict) { status = stdhttp.StatusConflict }; write(status, map[string]string{"error": err.Error()}); return }
+		write(stdhttp.StatusOK, presentOutput(order))
+	default:
+		write(stdhttp.StatusNotFound, map[string]string{"error": "route not found"})
+	}
+}
+
+func presentOutput(order *application.OrderOutput) map[string]any {
+	return map[string]any{"id": order.ID, "customerId": order.CustomerID, "items": order.Items, "total": map[string]any{"amount": order.Total, "formatted": formatBRL(order.Total)}, "status": order.Status, "createdAt": order.CreatedAt}
+}
+
+func presentOrder(order *domain.Order) map[string]any {
+	return map[string]any{"id": order.ID, "customerId": order.CustomerID, "items": order.Items, "total": map[string]any{"amount": order.Total(), "formatted": formatBRL(order.Total())}, "status": order.Status, "createdAt": order.CreatedAt}
+}
+
+func formatBRL(amount float64) string {
+	value := fmt.Sprintf("%.2f", amount)
+	parts := strings.SplitN(value, ".", 2)
+	whole := parts[0]
+	for index := len(whole) - 3; index > 0; index -= 3 { whole = whole[:index] + "." + whole[index:] }
+	return "R$ " + whole + "," + parts[1]
 }
 

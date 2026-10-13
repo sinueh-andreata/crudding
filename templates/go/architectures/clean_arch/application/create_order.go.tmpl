@@ -6,7 +6,6 @@ import (
 
 	"{{.GoModule}}/internal/domain"
 	"{{.GoModule}}/internal/ports"
-	"{{.GoModule}}/pkg/validator"
 )
 
 // CreateOrderUseCase executa o caso de uso de criação e consulta de pedidos.
@@ -21,34 +20,52 @@ func NewCreateOrderUseCase(repo ports.OrderRepository) *CreateOrderUseCase {
 
 // Execute valida e persiste um novo pedido.
 func (uc *CreateOrderUseCase) Execute(input CreateOrderInput) (*OrderOutput, error) {
-	if !validator.IsPositive(input.Amount) {
-		return nil, domain.ErrInvalidAmount
-	}
-	if !validator.NotEmpty(input.Item) {
-		return nil, domain.ErrEmptyItem
-	}
-
-	order := &domain.Order{
-		ID:        fmt.Sprintf("ord-%d", time.Now().UnixNano()),
-		Item:      input.Item,
-		Amount:    input.Amount,
-		CreatedAt: time.Now(),
+	order, err := domain.NewOrder(fmt.Sprintf("ord-%d", time.Now().UnixNano()), input.CustomerID, input.Items)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := uc.repo.Save(order); err != nil {
 		return nil, err
 	}
 
-	return &OrderOutput{
-		ID:        order.ID,
-		Item:      order.Item,
-		Amount:    order.Amount,
-		CreatedAt: order.CreatedAt,
-	}, nil
+	return toOutput(order), nil
 }
 
 // ListOrders retorna todos os pedidos através da porta.
 func (uc *CreateOrderUseCase) ListOrders() ([]domain.Order, error) {
 	return uc.repo.FindAll()
+}
+
+func (uc *CreateOrderUseCase) GetOrder(id string) (*OrderOutput, error) {
+	order, err := uc.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil {
+		return nil, domain.ErrOrderNotFound
+	}
+	return toOutput(order), nil
+}
+
+func (uc *CreateOrderUseCase) PayOrder(id string) (*OrderOutput, error) {
+	order, err := uc.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil {
+		return nil, domain.ErrOrderNotFound
+	}
+	if err := order.Pay(); err != nil {
+		return nil, err
+	}
+	if err := uc.repo.Save(order); err != nil {
+		return nil, err
+	}
+	return toOutput(order), nil
+}
+
+func toOutput(order *domain.Order) *OrderOutput {
+	return &OrderOutput{ID: order.ID, CustomerID: order.CustomerID, Items: order.Items, Total: order.Total(), Status: order.Status, CreatedAt: order.CreatedAt}
 }
 

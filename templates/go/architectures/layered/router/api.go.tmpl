@@ -1,0 +1,12 @@
+package router
+
+import (
+	"net/http"
+
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/services"
+)
+
+func Setup() http.Handler {
+	return handlers.NewHandler(services.NewService())
+}

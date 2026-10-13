@@ -64,6 +64,14 @@ A **Hexagonal Architecture** isola as regras fundamentais de negócio do mundo e
 
 ---
 
+## API REST
+
+- `GET /health` verifica a aplicação.
+- `GET /products`, `GET /products/{id}` e `POST /products` consultam e cadastram produtos (`name`, `price`, `stock`).
+- `POST /products/{id}/discount` com `{"percent":10}` aplica um desconto percentual.
+
+O repositório de demonstração usa memória; o adaptador PostgreSQL permanece como ponto de extensão.
+
 ## 🚀 Como Executar
 
 ### 1. Baixar dependências

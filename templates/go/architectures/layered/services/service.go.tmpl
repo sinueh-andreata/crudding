@@ -1,32 +1,111 @@
 package services
 
 import (
+	"errors"
+	"fmt"
+	"math"
+	"regexp"
+	"sort"
+	"strings"
 	"sync"
 
 	"{{.GoModule}}/internal/models"
 )
 
-// ItemService orquestra a lógica de negócio e gerencia os itens.
-type ItemService struct {
-	mu    sync.RWMutex
-	items []models.Item
+var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+
+var (
+	ErrConflict      = errors.New("conflict")
+	ErrUserNotFound  = errors.New("user not found")
+	ErrOrderNotFound = errors.New("order not found")
+)
+
+type Service struct {
+	mu     sync.RWMutex
+	users  map[int]models.User
+	orders map[int]models.Order
+	nextUserID int
+	nextOrderID int
 }
 
-// NewItemService instancia o serviço inicializando os dados.
-func NewItemService() *ItemService {
-	return &ItemService{
-		items: []models.Item{
-			{ID: "1", Title: "Notebook Gamer", Description: "16GB RAM, RTX 4060", Price: 4999.00},
-			{ID: "2", Title: "Monitor UltraWide", Description: "34 polegadas 144Hz", Price: 2199.90},
-		},
+func NewService() *Service {
+	service := &Service{
+		users: make(map[int]models.User),
+		orders: make(map[int]models.Order),
+		nextUserID: 1,
+		nextOrderID: 1,
 	}
+	_, _ = service.CreateUser("Ada Lovelace", "ada@example.com")
+	return service
 }
 
-// ListItems retorna os itens cadastrados.
-func (s *ItemService) ListItems() []models.Item {
+func (s *Service) ListUsers() []models.User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	copied := make([]models.Item, len(s.items))
-	copy(copied, s.items)
-	return copied
+	users := make([]models.User, 0, len(s.users))
+	for _, user := range s.users { users = append(users, user) }
+	sort.Slice(users, func(i, j int) bool { return users[i].ID < users[j].ID })
+	return users
+}
+
+func (s *Service) GetUser(id int) (models.User, bool) {
+	s.mu.RLock(); defer s.mu.RUnlock()
+	user, ok := s.users[id]
+	return user, ok
+}
+
+func (s *Service) CreateUser(name, email string) (models.User, error) {
+	name, email = strings.TrimSpace(name), strings.ToLower(strings.TrimSpace(email))
+	if name == "" { return models.User{}, errors.New("name is required") }
+	if !emailPattern.MatchString(email) { return models.User{}, errors.New("invalid email") }
+	s.mu.Lock(); defer s.mu.Unlock()
+	for _, user := range s.users { if user.Email == email { return models.User{}, fmt.Errorf("%w: email already registered", ErrConflict) } }
+	user := models.User{ID: s.nextUserID, Name: name, Email: email}
+	s.nextUserID++
+	s.users[user.ID] = user
+	return user, nil
+}
+
+func (s *Service) ListOrders(userID *int) []models.Order {
+	s.mu.RLock(); defer s.mu.RUnlock()
+	orders := make([]models.Order, 0, len(s.orders))
+	for _, order := range s.orders { if userID == nil || order.UserID == *userID { orders = append(orders, order) } }
+	sort.Slice(orders, func(i, j int) bool { return orders[i].ID < orders[j].ID })
+	return orders
+}
+
+func (s *Service) GetOrder(id int) (models.Order, bool) {
+	s.mu.RLock(); defer s.mu.RUnlock()
+	order, ok := s.orders[id]
+	return order, ok
+}
+
+func (s *Service) CreateOrder(userID int, items []models.OrderItem) (models.Order, error) {
+	if len(items) == 0 { return models.Order{}, errors.New("order must contain at least one item") }
+	s.mu.Lock(); defer s.mu.Unlock()
+	if userID <= 0 { return models.Order{}, errors.New("userId is invalid") }
+	if _, ok := s.users[userID]; !ok { return models.Order{}, ErrUserNotFound }
+	total := 0.0
+	for _, item := range items {
+		if strings.TrimSpace(item.Product) == "" || item.Quantity <= 0 || item.UnitPrice <= 0 || math.IsNaN(item.UnitPrice) || math.IsInf(item.UnitPrice, 0) {
+			return models.Order{}, errors.New("order item is invalid")
+		}
+		total += float64(item.Quantity) * item.UnitPrice
+	}
+	total = math.Round(total*100) / 100
+	order := models.Order{ID: s.nextOrderID, UserID: userID, Items: append([]models.OrderItem(nil), items...), Total: total, Status: "pending"}
+	s.nextOrderID++
+	s.orders[order.ID] = order
+	return order, nil
+}
+
+func (s *Service) ChangeOrderStatus(id int, status string) (models.Order, error) {
+	s.mu.Lock(); defer s.mu.Unlock()
+	order, ok := s.orders[id]
+	if !ok { return models.Order{}, ErrOrderNotFound }
+	if status == "paid" && order.Status != "pending" { return models.Order{}, fmt.Errorf("%w: order cannot be paid in its current state", ErrConflict) }
+	if status == "cancelled" && order.Status == "paid" { return models.Order{}, fmt.Errorf("%w: paid order cannot be cancelled", ErrConflict) }
+	order.Status = status
+	s.orders[id] = order
+	return order, nil
 }

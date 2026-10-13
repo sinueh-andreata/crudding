@@ -1,0 +1,13 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+{{if .HandlerImport}}	{{.HandlerImport}}
+{{end}})
+
+func main() {
+	handler := {{.HandlerExpr}}
+	router := gin.Default()
+	router.Any("/*path", gin.WrapH(handler))
+	_ = router.Run(":8080")
+}

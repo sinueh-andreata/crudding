@@ -1,9 +1,36 @@
 package domain
 
-// Product representa o modelo do domínio da aplicação.
+import (
+	"errors"
+	"math"
+	"strings"
+)
+
+var (
+	ErrInvalidProduct  = errors.New("invalid product")
+	ErrProductNotFound = errors.New("product not found")
+)
+
 type Product struct {
 	ID    string  `json:"id"`
 	Name  string  `json:"name"`
 	Price float64 `json:"price"`
+	Stock int     `json:"stock"`
+}
+
+func NewProduct(id, name string, price float64, stock int) (Product, error) {
+	name = strings.TrimSpace(name)
+	if len(name) < 3 || price <= 0 || math.IsNaN(price) || math.IsInf(price, 0) || stock < 0 {
+		return Product{}, ErrInvalidProduct
+	}
+	return Product{ID: id, Name: name, Price: math.Round(price*100) / 100, Stock: stock}, nil
+}
+
+func (p Product) Discount(percent float64) (Product, error) {
+	if percent <= 0 || percent >= 100 || math.IsNaN(percent) || math.IsInf(percent, 0) {
+		return Product{}, ErrInvalidProduct
+	}
+	p.Price = math.Round(p.Price*(1-percent/100)*100) / 100
+	return p, nil
 }
 

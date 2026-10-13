@@ -6,11 +6,12 @@ import (
 
 	"{{.GoModule}}/internal/order"
 	"{{.GoModule}}/internal/platform/database"
+	"{{.GoModule}}/internal/product"
 )
 
 func main() {
 	_ = database.Connect()
-	orderService := order.NewService()
+	orderService := order.NewService(product.NewService())
 
 	log.Println("[Worker] Background Worker iniciado...")
 

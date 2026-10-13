@@ -6,5 +6,6 @@ import "{{.GoModule}}/internal/domain"
 type OrderRepository interface {
 	Save(order *domain.Order) error
 	FindAll() ([]domain.Order, error)
+	FindByID(id string) (*domain.Order, error)
 }
 

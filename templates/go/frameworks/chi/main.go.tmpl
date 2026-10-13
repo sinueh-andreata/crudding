@@ -1,0 +1,17 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+{{if .HandlerImport}}	{{.HandlerImport}}
+{{end}})
+
+func main() {
+	handler := {{.HandlerExpr}}
+	router := chi.NewRouter()
+	router.Mount("/", handler)
+	log.Println("Servidor HTTP rodando em http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", router))
+}

@@ -1,0 +1,107 @@
+package router
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"{{.GoModule}}/internal/order"
+	"{{.GoModule}}/internal/product"
+)
+
+type api struct {
+	catalog *product.Service
+	orders  *order.Service
+}
+
+func Setup() http.Handler {
+	catalog := product.NewService()
+	return &api{catalog: catalog, orders: order.NewService(catalog)}
+}
+
+func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	switch {
+	case r.Method == http.MethodGet && len(parts) == 1 && parts[0] == "health":
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	case r.Method == http.MethodGet && len(parts) == 1 && parts[0] == "products":
+		writeJSON(w, http.StatusOK, a.catalog.List())
+	case r.Method == http.MethodPost && len(parts) == 1 && parts[0] == "products":
+		var input struct {
+			SKU   string  `json:"sku"`
+			Name  string  `json:"name"`
+			Price float64 `json:"price"`
+			Stock int     `json:"stock"`
+		}
+		if json.NewDecoder(r.Body).Decode(&input) != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+		value, err := a.catalog.Create(input.SKU, input.Name, input.Price, input.Stock)
+		if err != nil {
+			status := http.StatusBadRequest
+			if errors.Is(err, product.ErrConflict) {
+				status = http.StatusConflict
+			}
+			writeJSON(w, status, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusCreated, value)
+	case len(parts) == 2 && parts[0] == "products" && r.Method == http.MethodGet:
+		id, err := strconv.Atoi(parts[1])
+		if err != nil || id <= 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id is invalid"})
+			return
+		}
+		value, ok := a.catalog.Get(id)
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "product not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, value)
+	case r.Method == http.MethodGet && len(parts) == 1 && parts[0] == "orders":
+		writeJSON(w, http.StatusOK, a.orders.GetOrders())
+	case r.Method == http.MethodPost && len(parts) == 1 && parts[0] == "orders":
+		var input struct {
+			Items []order.ItemInput `json:"items"`
+		}
+		if json.NewDecoder(r.Body).Decode(&input) != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+		value, err := a.orders.Place(input.Items)
+		if err != nil {
+			status := http.StatusBadRequest
+			if errors.Is(err, product.ErrNotFound) {
+				status = http.StatusNotFound
+			} else if errors.Is(err, product.ErrConflict) {
+				status = http.StatusConflict
+			}
+			writeJSON(w, status, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusCreated, value)
+	case len(parts) == 2 && parts[0] == "orders" && r.Method == http.MethodGet:
+		id, err := strconv.Atoi(parts[1])
+		if err != nil || id <= 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id is invalid"})
+			return
+		}
+		value, ok := a.orders.GetOrder(id)
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "order not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, value)
+	default:
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "route not found"})
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}

@@ -1,0 +1,14 @@
+package main
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+{{if .HandlerImport}}	{{.HandlerImport}}
+{{end}})
+
+func main() {
+	handler := {{.HandlerExpr}}
+	app := fiber.New()
+	app.Use(adaptor.HTTPHandler(handler))
+	_ = app.Listen(":8080")
+}

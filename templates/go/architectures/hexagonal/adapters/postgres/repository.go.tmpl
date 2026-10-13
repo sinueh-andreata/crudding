@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"sort"
 	"sync"
 
 	"{{.GoModule}}/internal/domain"
@@ -9,26 +10,39 @@ import (
 // Repository é o Driven Adapter que implementa a porta ports.ProductRepository.
 type Repository struct {
 	mu       sync.RWMutex
-	products []domain.Product
+	products map[string]domain.Product
 }
 
 // New instancia o adaptador de persistência PostgreSQL (simulado em memória).
 func New() *Repository {
-	return &Repository{
-		products: []domain.Product{
-			{ID: "prod-1", Name: "Mouse Ergonômico", Price: 189.90},
-			{ID: "prod-2", Name: "Teclado Mecânico RGB", Price: 450.00},
-			{ID: "prod-3", Name: "Headset 7.1 Surround", Price: 320.00},
-		},
-	}
+	return &Repository{products: map[string]domain.Product{
+		"prod-1": {ID: "prod-1", Name: "Headset 7.1 Surround", Price: 320, Stock: 15},
+	}}
 }
 
 // FindAll retorna os produtos persistidos.
 func (r *Repository) FindAll() ([]domain.Product, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	copied := make([]domain.Product, len(r.products))
-	copy(copied, r.products)
+	copied := make([]domain.Product, 0, len(r.products))
+	for _, product := range r.products {
+		copied = append(copied, product)
+	}
+	sort.Slice(copied, func(i, j int) bool { return copied[i].ID < copied[j].ID })
 	return copied, nil
+}
+
+func (r *Repository) FindByID(id string) (domain.Product, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	product, ok := r.products[id]
+	return product, ok
+}
+
+func (r *Repository) Save(product domain.Product) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.products[product.ID] = product
+	return nil
 }
 

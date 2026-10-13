@@ -48,6 +48,15 @@ $$\text{Router (Rotas)} \longrightarrow \text{Handlers (Transporte)} \longrighta
 
 ---
 
+## API
+
+- `GET /users`, `GET /users/{id}` e `POST /users` com `name` e `email`.
+- `GET /orders`, `GET /orders/{id}` e `POST /orders` com `userId` e itens `product`, `quantity` e `unitPrice`.
+- `GET /orders?userId={id}` filtra pedidos por usuário.
+- `POST /orders/{id}/pay` e `POST /orders/{id}/cancel` alteram o estado do pedido.
+
+O exemplo inicia com Ada Lovelace. Usuários e pedidos são armazenados em memória.
+
 ## 🚀 Como Executar
 
 ### 1. Baixar dependências

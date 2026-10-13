@@ -1,0 +1,156 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type Task struct {
+	ID        int       `json:"id"`
+	Title     string    `json:"title"`
+	Done      bool      `json:"done"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type TaskStore struct {
+	mu     sync.RWMutex
+	tasks  map[int]Task
+	nextID int
+}
+
+func NewTaskStore() *TaskStore {
+	store := &TaskStore{tasks: make(map[int]Task), nextID: 1}
+	store.Create("Explorar o projeto gerado pelo crudding")
+	return store
+}
+
+func (s *TaskStore) List() []Task {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	tasks := make([]Task, 0, len(s.tasks))
+	for _, task := range s.tasks {
+		tasks = append(tasks, task)
+	}
+	sort.Slice(tasks, func(i, j int) bool { return tasks[i].ID < tasks[j].ID })
+	return tasks
+}
+
+func (s *TaskStore) Get(id int) (Task, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	task, ok := s.tasks[id]
+	return task, ok
+}
+
+func (s *TaskStore) Create(title string) Task {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	task := Task{ID: s.nextID, Title: title, CreatedAt: time.Now().UTC()}
+	s.tasks[task.ID] = task
+	s.nextID++
+	return task
+}
+
+func (s *TaskStore) Complete(id int) (Task, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	task, ok := s.tasks[id]
+	if !ok {
+		return Task{}, false
+	}
+	task.Done = true
+	s.tasks[id] = task
+	return task, true
+}
+
+func (s *TaskStore) Remove(id int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.tasks[id]; !ok {
+		return false
+	}
+	delete(s.tasks, id)
+	return true
+}
+
+type taskHandler struct{ store *TaskStore }
+
+func NewTaskHandler() http.Handler { return &taskHandler{store: NewTaskStore()} }
+
+func (h *taskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) == 1 && parts[0] == "tasks" {
+		switch r.Method {
+		case http.MethodGet:
+			writeJSON(w, http.StatusOK, h.store.List())
+		case http.MethodPost:
+			var input struct {
+				Title string `json:"title"`
+			}
+			if json.NewDecoder(r.Body).Decode(&input) != nil || strings.TrimSpace(input.Title) == "" {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "title is required"})
+				return
+			}
+			writeJSON(w, http.StatusCreated, h.store.Create(strings.TrimSpace(input.Title)))
+		default:
+			methodNotAllowed(w)
+		}
+		return
+	}
+	if len(parts) < 2 || parts[0] != "tasks" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "route not found"})
+		return
+	}
+	id, err := strconv.Atoi(parts[1])
+	if err != nil || id <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id is invalid"})
+		return
+	}
+	if len(parts) == 2 {
+		switch r.Method {
+		case http.MethodGet:
+			task, ok := h.store.Get(id)
+			if !ok {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "task not found"})
+				return
+			}
+			writeJSON(w, http.StatusOK, task)
+		case http.MethodDelete:
+			if !h.store.Remove(id) {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "task not found"})
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			methodNotAllowed(w)
+		}
+		return
+	}
+	if len(parts) == 3 && parts[2] == "done" && r.Method == http.MethodPatch {
+		task, ok := h.store.Complete(id)
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "task not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, task)
+		return
+	}
+	writeJSON(w, http.StatusNotFound, map[string]string{"error": "route not found"})
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if body != nil {
+		_ = json.NewEncoder(w).Encode(body)
+	}
+}
+
+func methodNotAllowed(w http.ResponseWriter) {
+	writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+}

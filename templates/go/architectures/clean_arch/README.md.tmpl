@@ -75,6 +75,15 @@ A **Clean Architecture** estabelece anéis concêntricos onde o fluxo de depend�
 
 ---
 
+## API
+
+- `GET /health` verifica a aplicação.
+- `GET /orders` e `GET /orders/{id}` consultam pedidos.
+- `POST /orders` cria um pedido com `customerId` e itens `sku`, `quantity` e `unitPrice`.
+- `POST /orders/{id}/pay` paga um pedido pendente.
+
+O total é calculado no servidor e retornado com valor numérico e formato BRL. Os dados ficam em memória.
+
 ## 🚀 Como Executar
 
 ### 1. Baixar dependências

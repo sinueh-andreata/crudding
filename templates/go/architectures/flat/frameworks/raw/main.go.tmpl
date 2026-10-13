@@ -1,25 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		item, _ := ParseInput("crudding flat")
-		report := GenerateReport(item)
-
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"message": "Hello from Flat Architecture (Standard net/http)",
-			"item":    item,
-			"report":  report,
-		})
-	})
-
 	log.Println("Servidor HTTP rodando em http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", NewTaskHandler()))
 }
 

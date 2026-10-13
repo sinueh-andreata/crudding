@@ -5,13 +5,13 @@ import (
 
 	grpcAdapter "{{.GoModule}}/internal/adapters/grpc"
 	"{{.GoModule}}/internal/adapters/postgres"
-	"{{.GoModule}}/internal/domain"
+	"{{.GoModule}}/internal/application"
 )
 
 func main() {
 	// Composition Root para o serviço gRPC
 	repo := postgres.New()
-	service := domain.NewService(repo)
+	service := application.NewService(repo)
 	server := grpcAdapter.NewServer(service)
 
 	log.Println("Inicializando entrypoint gRPC em cmd/grpc...")

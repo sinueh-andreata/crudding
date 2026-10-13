@@ -61,7 +61,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 
 				switch config.Architecture {
 				case "flat":
-					for _, f := range []string{"main.go", "parse.go", "parse_test.go", "report.go"} {
+					for _, f := range []string{"main.go", "tasks.go", "tasks_test.go"} {
 						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
 							t.Errorf("arquivo flat %s ausente: %v", f, err)
 						}
@@ -76,7 +76,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 						t.Errorf("camada de repositories não deveria existir em layered")
 					}
 				case "modular":
-					for _, f := range []string{"cmd/api/main.go", "cmd/worker/main.go", "internal/router/router.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/user/user.go", "internal/user/handler.go", "internal/platform/database/database.go", "internal/platform/auth/auth.go"} {
+					for _, f := range []string{"cmd/api/main.go", "cmd/worker/main.go", "internal/router/router.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/product/product.go", "internal/product/service.go", "internal/platform/database/database.go"} {
 						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
 							t.Errorf("arquivo modular %s ausente: %v", f, err)
 						}
@@ -88,7 +88,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 						t.Errorf("repository.go não deveria existir em modular user")
 					}
 				case "hexagonal":
-					for _, f := range []string{"cmd/rest/main.go", "cmd/grpc/main.go", "internal/domain/product.go", "internal/domain/service.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/http/handler.go", "internal/adapters/grpc/server.go", "internal/adapters/postgres/repository.go"} {
+					for _, f := range []string{"cmd/rest/main.go", "cmd/grpc/main.go", "internal/domain/product.go", "internal/application/service.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/http/handler.go", "internal/adapters/grpc/server.go", "internal/adapters/postgres/repository.go"} {
 						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
 							t.Errorf("arquivo hexagonal %s ausente: %v", f, err)
 						}
@@ -300,4 +300,117 @@ func TestGenerateGoVet(t *testing.T) {
 			t.Fatalf("Generate() error = %v for %s", err, arch)
 		}
 	}
+}
+
+func TestGeneratedGoRawScaffoldsCompile(t *testing.T) {
+	goCommand, err := exec.LookPath("go")
+	if err != nil {
+		t.Skip("go is not installed")
+	}
+	templates := os.DirFS(filepath.Join("..", ".."))
+	for _, architecture := range []string{"flat", "layered", "modular", "hexagonal", "clean arch"} {
+		t.Run(architecture, func(t *testing.T) {
+			destination := filepath.Join(t.TempDir(), "Sample")
+			config := types.ProjectConfig{ProjectName: "Sample", Language: "go", Framework: "raw", Architecture: architecture}
+			if err := Generate(destination, config, templates); err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			if smokeTest, ok := goAPISmokeTests[architecture]; ok {
+				if err := os.WriteFile(filepath.Join(destination, "api_smoke_test.go"), []byte(smokeTest), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			command := exec.Command(goCommand, "test", "./...")
+			command.Dir = destination
+			if output, err := command.CombinedOutput(); err != nil {
+				t.Fatalf("generated Go project does not compile: %v\n%s", err, output)
+			}
+		})
+	}
+}
+
+var goAPISmokeTests = map[string]string{
+	"layered": `package main
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"example.com/sample/internal/router"
+)
+func TestDemoAPI(t *testing.T) {
+	handler := router.Setup()
+	request := func(method, path, body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return response
+	}
+	created := request(http.MethodPost, "/orders", ` + "`" + `{"userId":1,"items":[{"product":"book","quantity":2,"unitPrice":3.25}]}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"total":6.5` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	paid := request(http.MethodPost, "/orders/1/pay", "")
+	if paid.Code != http.StatusOK || !strings.Contains(paid.Body.String(), ` + "`" + `"status":"paid"` + "`" + `) { t.Fatalf("pay = %d %s", paid.Code, paid.Body.String()) }
+	if cancelled := request(http.MethodPost, "/orders/1/cancel", ""); cancelled.Code != http.StatusConflict { t.Fatalf("cancel status = %d", cancelled.Code) }
+}`,
+	"modular": `package main
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"example.com/sample/internal/router"
+)
+func TestDemoAPI(t *testing.T) {
+	handler := router.Setup()
+	request := func(method, path, body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return response
+	}
+	created := request(http.MethodPost, "/orders", ` + "`" + `{"items":[{"productId":1,"quantity":2}]}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"total":900` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	product := request(http.MethodGet, "/products/1", "")
+	if !strings.Contains(product.Body.String(), ` + "`" + `"stock":8` + "`" + `) { t.Fatalf("stock = %s", product.Body.String()) }
+}`,
+	"hexagonal": `package main
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	httpapi "example.com/sample/internal/adapters/http"
+)
+func TestDemoAPI(t *testing.T) {
+	handler := httpapi.NewAPI()
+	request := func(method, path, body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return response
+	}
+	discount := request(http.MethodPost, "/products/prod-1/discount", ` + "`" + `{"percent":10}` + "`" + `)
+	if discount.Code != http.StatusOK || !strings.Contains(discount.Body.String(), ` + "`" + `"price":288` + "`" + `) { t.Fatalf("discount = %d %s", discount.Code, discount.Body.String()) }
+	if invalid := request(http.MethodPost, "/products/prod-1/discount", ` + "`" + `{"percent":100}` + "`" + `); invalid.Code != http.StatusUnprocessableEntity { t.Fatalf("invalid discount status = %d", invalid.Code) }
+}`,
+	"clean arch": `package main
+import (
+	"net/http"
+	"net/http/httptest"
+	"regexp"
+	"strings"
+	"testing"
+	httpapi "example.com/sample/internal/infrastructure/http"
+)
+func TestDemoAPI(t *testing.T) {
+	handler := httpapi.NewAPI()
+	request := func(method, path, body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return response
+	}
+	created := request(http.MethodPost, "/orders", ` + "`" + `{"customerId":"customer-1","items":[{"sku":"SKU-1","quantity":2,"unitPrice":12.5}]}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"formatted":"R$ 25,00"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	orderID := regexp.MustCompile("\\\"id\\\":\\\"([^\\\"]+)\\\"").FindStringSubmatch(created.Body.String())[1]
+	paid := request(http.MethodPost, "/orders/"+orderID+"/pay", "")
+	if paid.Code != http.StatusOK || !strings.Contains(paid.Body.String(), ` + "`" + `"status":"paid"` + "`" + `) { t.Fatalf("pay = %d %s", paid.Code, paid.Body.String()) }
+	if again := request(http.MethodPost, "/orders/"+orderID+"/pay", ""); again.Code != http.StatusConflict { t.Fatalf("second payment status = %d", again.Code) }
+}`,
 }
