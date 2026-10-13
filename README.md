@@ -1,38 +1,38 @@
 # crudding
 
-CLI interativo em Go 1.27 que gera projetos a partir de templates embutidos no executável.
+Interactive CLI written in Go 1.27 that generates projects from templates embedded in the executable.
 
-## Executar
+## Run
 
 ```sh
 go run ./cmd/crudding
 ```
 
-Use as setas para navegar, Espaço para selecionar e Enter para avançar. Escolha Python, Go ou Node; depois selecione o framework e uma arquitetura. Para Python, as opções são: `flat`, `layered`, `modular`, `hexagonal` ou `clean_arch`. Para Go, as opções são: `flat`, `layered`, `modular`, `hexagonal` ou `clean arch`. Para Node, os frameworks são `raw`, `express`, `fastify` e `nest`, e as arquiteturas são `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`; escolha também JavaScript (`js`) ou TypeScript (`ts`). Antes de gerar, o crudding pede um nome; esse nome será usado como pasta dentro do diretório atual. Uma pasta existente nunca é sobrescrita. Pressione `q` ou Esc para sair.
+Use the arrow keys to navigate, Space to select, and Enter to continue. Choose Python, Go, or Node, then select a framework and architecture. Python architectures are `flat`, `layered`, `modular`, `hexagonal`, and `clean_arch`. Go architectures are `flat`, `layered`, `modular`, `hexagonal`, and `clean arch`. Node frameworks are `raw`, `express`, `fastify`, and `nest`; its architectures are `flat`, `layered`, `modular`, `hexagonal`, and `clean_arch`. Also choose JavaScript (`js`) or TypeScript (`ts`). Before generating the project, crudding prompts for a name and creates a directory with that name in the current working directory. Existing directories are never overwritten. Press `q` or Esc to exit.
 
-Os arquivos dos templates são compilados dentro do executável, sem baixar templates durante a geração. Para instalar as dependências, siga o README criado no projeto: Python usa `python -m pip install -r requirements.txt`, Go usa `go mod tidy`, e Node usa `npm install`.
+Template files are compiled into the executable, so no templates are downloaded during project generation. To install dependencies, follow the README generated for the project: Python uses `python -m pip install -r requirements.txt`, Go uses `go mod tidy`, and Node uses `npm install`.
 
-## Instalar o comando `crudding`
+## Install the `crudding` Command
 
 ```sh
 go install ./cmd/crudding
 ```
 
-O Go instala o executável em `$(go env GOBIN)` ou, se `GOBIN` não estiver definido, em `$(go env GOPATH)/bin`. Esse diretório precisa estar no `PATH` para executar `crudding` diretamente.
+Go installs the executable in `$(go env GOBIN)` or, if `GOBIN` is not set, in `$(go env GOPATH)/bin`. This directory must be on your `PATH` to run `crudding` directly.
 
-Reinstale o executável após atualizar o crudding para incluir mudanças nos templates.
+Reinstall the executable after updating crudding to include template changes.
 
-## Estrutura
+## Project Structure
 
 ```text
-cmd/crudding/          ponto de entrada
-internal/generator/  dispatcher da geração
-internal/generator/common/ helpers compartilhados
-internal/generator/python/ geração de projetos Python
-internal/generator/golang/ geração de projetos Go
-internal/generator/node/   geração de projetos Node
-internal/models/     modelo do menu interativo
-internal/project/    nome, validação e configuração de projetos
-internal/types/      tipos compartilhados internamente
-templates/           templates incorporados ao binário por assets.go
+cmd/crudding/                    application entry point
+internal/generator/              generation dispatcher
+internal/generator/common/       shared helpers
+internal/generator/python/       Python project generation
+internal/generator/golang/       Go project generation
+internal/generator/node/         Node project generation
+internal/models/                 interactive menu model
+internal/project/                project naming, validation, and configuration
+internal/types/                  shared internal types
+templates/                       templates embedded into the binary by assets.go
 ```
