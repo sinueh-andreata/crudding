@@ -110,26 +110,24 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 				if err := json.Unmarshal(contents, &parsed); err != nil {
 					t.Fatalf("invalid package.json: %v", err)
 				}
-				if !strings.Contains(string(readmeContent), "- Arquitetura: "+config.Architecture) {
-					t.Errorf("README não identifica a arquitetura %s", config.Architecture)
-				}
-				extension := "." + config.Runtime
 				requiredFiles := map[string][]string{
-					"flat":       {"src/main" + extension, "src/app" + extension, "src/users" + extension},
-					"layered":    {"src/server" + extension, "src/app" + extension, "src/routes/index" + extension, "src/routes/users.routes" + extension, "src/controllers/users.controller" + extension, "src/services/users.service" + extension, "src/schemas/users.schema" + extension, "src/middlewares/error.middleware" + extension, "src/router/router" + extension, "src/shared/errors/app-error" + extension},
-					"modular":    {"src/server" + extension, "src/index" + extension, "src/features/auth/auth.service" + extension, "src/features/users/users.model" + extension, "src/features/products/product.route" + extension},
-					"hexagonal":  {"src/server" + extension, "src/config/app" + extension, "src/core/domain/user.entity" + extension, "src/core/ports/in/user-service.port" + extension, "src/core/ports/out/user-repository.port" + extension, "src/adapters/driving/http/user.routes" + extension, "src/adapters/driven/persistence/memory-user.repository" + extension},
-					"clean_arch": {"src/main" + extension, "src/domain/order/Order" + extension, "src/application/order/CreateOrderUseCase" + extension, "src/application/order/ports/OrderRepository" + extension, "src/infrastructure/http/server" + extension, "src/infrastructure/http/routes/orderRoutes" + extension, "src/infrastructure/config/container" + extension},
+					"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},
+					"layered":    {"src/main", "src/http/server", "src/routes/index", "src/controllers/user-controller", "src/services/order-service", "src/models/user"},
+					"modular":    {"src/main", "src/shared/http/server", "src/shared/database", "src/modules/catalog/index", "src/modules/orders/order-service"},
+					"hexagonal":  {"src/entrypoints/main", "src/adapters/http/server", "src/adapters/http/product-controller", "src/domain/product-manager", "src/ports/product-repository"},
+					"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 				}
 				for _, requiredFile := range requiredFiles[config.Architecture] {
-					if _, err := os.Stat(filepath.Join(destination, requiredFile)); err != nil {
-						t.Errorf("arquivo Node %s ausente para arquitetura %s: %v", requiredFile, config.Architecture, err)
+					if _, err := os.Stat(filepath.Join(destination, requiredFile+"."+config.Runtime)); err != nil {
+						t.Errorf("arquivo Node %s.%s ausente: %v", requiredFile, config.Runtime, err)
 					}
 				}
-				if config.Runtime == "ts" {
-					if _, err := os.Stat(filepath.Join(destination, "tsconfig.json")); err != nil {
-						t.Errorf("tsconfig.json ausente: %v", err)
-					}
+				_, err = os.Stat(filepath.Join(destination, "tsconfig.json"))
+				if hasTsconfig := err == nil; hasTsconfig != (config.Runtime == "ts") {
+					t.Errorf("tsconfig.json presente = %v para runtime %s", hasTsconfig, config.Runtime)
+				}
+				if !strings.Contains(string(readmeContent), "- Arquitetura: "+config.Architecture) {
+					t.Errorf("README não identifica a arquitetura %s", config.Architecture)
 				}
 			}
 
@@ -199,8 +197,8 @@ func TestGenerateRejectsUnsupportedOptions(t *testing.T) {
 	for _, config := range []types.ProjectConfig{
 		{Language: "go", Framework: "express", Architecture: "flat"},
 		{Language: "go", Framework: "raw", Architecture: "monorepo"},
-		{Language: "node", Runtime: "ruby", Framework: "raw", Architecture: "flat"},
-		{Language: "node", Runtime: "js", Framework: "raw", Architecture: "unknown"},
+		{Language: "node", Runtime: "ruby", Framework: "raw", Architecture: "layered"},
+		{Language: "node", Runtime: "js", Framework: "raw", Architecture: "monorepo"},
 		{Language: "python", Framework: "raw", Architecture: "monorepo"},
 		{Language: "python", Framework: "raw", Architecture: "unknown"},
 	} {
