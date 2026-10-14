@@ -2,233 +2,138 @@ package golang
 
 import (
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
-	"strings"
+	"path"
 
 	"crudding/internal/generator/common"
 	"crudding/internal/project"
 	"crudding/internal/types"
 )
 
+var Frameworks = []string{"raw", "gin", "fiber", "chi"}
+
+var Architectures = []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
+
 type templateData struct {
-	ProjectName   string
+	common.BaseData
 	GoModule      string
-	Framework     string
-	Architecture  string
 	HandlerImport string
 	HandlerExpr   string
 }
 
-type architectureDef struct {
-	directories   []string
-	handlerImport string
+// file liga um template (relativo a templates/go/architectures/<arquitetura>/,
+// sem a extensão .tmpl) ao caminho de saída no projeto gerado.
+type file struct {
+	template string
+	output   string
+}
+
+// architecture descreve um layout Go. go.mod, go.sum, .gitignore, README.md e
+// o main.go do framework são adicionados automaticamente a todos os layouts.
+type architecture struct {
+	main          string // destino do main.go do framework
+	handlerImport string // formatado com o módulo Go (%s)
 	handlerExpr   string
-	files         func(framework string) []common.File
+	files         []file
 }
 
-var frameworks = map[string]bool{"raw": true, "gin": true, "fiber": true, "chi": true}
-
-func normalizeArchitecture(arch string) string {
-	switch strings.ToLower(strings.TrimSpace(arch)) {
-	case "flat":
-		return "flat"
-	case "layered":
-		return "layered"
-	case "modular":
-		return "modular"
-	case "hexagonal":
-		return "hexagonal"
-	case "clean arch", "clean_arch", "cleanarch":
-		return "clean arch"
-	default:
-		return arch
-	}
-}
-
-var architectures = map[string]architectureDef{
+var architectures = map[string]architecture{
 	"flat": {
-		directories: []string{},
+		main:        "main.go",
 		handlerExpr: "NewTaskHandler()",
-		files: func(framework string) []common.File {
-			return []common.File{
-				{TemplatePath: "templates/go/base/go.mod.tmpl", OutputPath: "go.mod"},
-				{TemplatePath: "templates/go/base/go.sum.tmpl", OutputPath: "go.sum"},
-				{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-				{TemplatePath: "templates/go/architectures/flat/README.md.tmpl", OutputPath: "README.md"},
-				{TemplatePath: "templates/go/architectures/flat/tasks.go.tmpl", OutputPath: "tasks.go"},
-				{TemplatePath: "templates/go/architectures/flat/tasks_test.go.tmpl", OutputPath: "tasks_test.go"},
-				{TemplatePath: fmt.Sprintf("templates/go/frameworks/%s/main.go.tmpl", framework), OutputPath: "main.go"},
-			}
+		files: []file{
+			{"tasks.go", "tasks.go"},
+			{"tasks_test.go", "tasks_test.go"},
 		},
 	},
 	"layered": {
-		directories: []string{
-			"cmd/api",
-			"internal/router",
-			"internal/handlers",
-			"internal/services",
-			"internal/models",
-		},
+		main:          "cmd/api/main.go",
 		handlerImport: `router "%s/internal/router"`,
 		handlerExpr:   "router.Setup()",
-		files: func(framework string) []common.File {
-			return []common.File{
-				{TemplatePath: "templates/go/base/go.mod.tmpl", OutputPath: "go.mod"},
-				{TemplatePath: "templates/go/base/go.sum.tmpl", OutputPath: "go.sum"},
-				{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-				{TemplatePath: "templates/go/architectures/layered/README.md.tmpl", OutputPath: "README.md"},
-				{TemplatePath: fmt.Sprintf("templates/go/frameworks/%s/main.go.tmpl", framework), OutputPath: "cmd/api/main.go"},
-				{TemplatePath: "templates/go/architectures/layered/router/api.go.tmpl", OutputPath: "internal/router/router.go"},
-				{TemplatePath: "templates/go/architectures/layered/handlers/handler.go.tmpl", OutputPath: "internal/handlers/handler.go"},
-				{TemplatePath: "templates/go/architectures/layered/services/service.go.tmpl", OutputPath: "internal/services/service.go"},
-				{TemplatePath: "templates/go/architectures/layered/models/item.go.tmpl", OutputPath: "internal/models/item.go"},
-			}
+		files: []file{
+			{"router/api.go", "internal/router/router.go"},
+			{"handlers/handler.go", "internal/handlers/handler.go"},
+			{"services/service.go", "internal/services/service.go"},
+			{"models/item.go", "internal/models/item.go"},
 		},
 	},
 	"modular": {
-		directories: []string{
-			"cmd/api",
-			"cmd/worker",
-			"internal/router",
-			"internal/order",
-			"internal/product",
-			"internal/platform/database",
-		},
+		main:          "cmd/api/main.go",
 		handlerImport: `router "%s/internal/router"`,
 		handlerExpr:   "router.Setup()",
-		files: func(framework string) []common.File {
-			return []common.File{
-				{TemplatePath: "templates/go/base/go.mod.tmpl", OutputPath: "go.mod"},
-				{TemplatePath: "templates/go/base/go.sum.tmpl", OutputPath: "go.sum"},
-				{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-				{TemplatePath: "templates/go/architectures/modular/README.md.tmpl", OutputPath: "README.md"},
-				{TemplatePath: fmt.Sprintf("templates/go/frameworks/%s/main.go.tmpl", framework), OutputPath: "cmd/api/main.go"},
-				{TemplatePath: "templates/go/architectures/modular/worker/main.go.tmpl", OutputPath: "cmd/worker/main.go"},
-				{TemplatePath: "templates/go/architectures/modular/router/router.go.tmpl", OutputPath: "internal/router/router.go"},
-				{TemplatePath: "templates/go/architectures/modular/order/order.go.tmpl", OutputPath: "internal/order/order.go"},
-				{TemplatePath: "templates/go/architectures/modular/order/handler.go.tmpl", OutputPath: "internal/order/handler.go"},
-				{TemplatePath: "templates/go/architectures/modular/order/service.go.tmpl", OutputPath: "internal/order/service.go"},
-				{TemplatePath: "templates/go/architectures/modular/product/product.go.tmpl", OutputPath: "internal/product/product.go"},
-				{TemplatePath: "templates/go/architectures/modular/product/service.go.tmpl", OutputPath: "internal/product/service.go"},
-				{TemplatePath: "templates/go/architectures/modular/platform/database/database.go.tmpl", OutputPath: "internal/platform/database/database.go"},
-			}
+		files: []file{
+			{"worker/main.go", "cmd/worker/main.go"},
+			{"router/router.go", "internal/router/router.go"},
+			{"order/order.go", "internal/order/order.go"},
+			{"order/handler.go", "internal/order/handler.go"},
+			{"order/service.go", "internal/order/service.go"},
+			{"product/product.go", "internal/product/product.go"},
+			{"product/service.go", "internal/product/service.go"},
+			{"platform/database/database.go", "internal/platform/database/database.go"},
 		},
 	},
 	"hexagonal": {
-		directories: []string{
-			"cmd/rest",
-			"cmd/grpc",
-			"internal/domain",
-			"internal/application",
-			"internal/ports",
-			"internal/adapters/http",
-			"internal/adapters/grpc",
-			"internal/adapters/postgres",
-		},
+		main:          "cmd/rest/main.go",
 		handlerImport: `httpapi "%s/internal/adapters/http"`,
 		handlerExpr:   "httpapi.NewAPI()",
-		files: func(framework string) []common.File {
-			return []common.File{
-				{TemplatePath: "templates/go/base/go.mod.tmpl", OutputPath: "go.mod"},
-				{TemplatePath: "templates/go/base/go.sum.tmpl", OutputPath: "go.sum"},
-				{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-				{TemplatePath: "templates/go/architectures/hexagonal/README.md.tmpl", OutputPath: "README.md"},
-				{TemplatePath: fmt.Sprintf("templates/go/frameworks/%s/main.go.tmpl", framework), OutputPath: "cmd/rest/main.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/grpc/main.go.tmpl", OutputPath: "cmd/grpc/main.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/domain/product.go.tmpl", OutputPath: "internal/domain/product.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/domain/service.go.tmpl", OutputPath: "internal/application/service.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/ports/repository.go.tmpl", OutputPath: "internal/ports/repository.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/ports/service.go.tmpl", OutputPath: "internal/ports/service.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/adapters/http/handler.go.tmpl", OutputPath: "internal/adapters/http/handler.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/adapters/grpc/server.go.tmpl", OutputPath: "internal/adapters/grpc/server.go"},
-				{TemplatePath: "templates/go/architectures/hexagonal/adapters/postgres/repository.go.tmpl", OutputPath: "internal/adapters/postgres/repository.go"},
-			}
+		files: []file{
+			{"grpc/main.go", "cmd/grpc/main.go"},
+			{"domain/product.go", "internal/domain/product.go"},
+			{"domain/service.go", "internal/application/service.go"},
+			{"ports/repository.go", "internal/ports/repository.go"},
+			{"ports/service.go", "internal/ports/service.go"},
+			{"adapters/http/handler.go", "internal/adapters/http/handler.go"},
+			{"adapters/grpc/server.go", "internal/adapters/grpc/server.go"},
+			{"adapters/postgres/repository.go", "internal/adapters/postgres/repository.go"},
 		},
 	},
-	"clean arch": {
-		directories: []string{
-			"cmd/api",
-			"internal/domain",
-			"internal/application",
-			"internal/ports",
-			"internal/infrastructure/persistence",
-			"internal/infrastructure/http",
-			"internal/infrastructure/messaging",
-			"pkg/validator",
-			"migrations",
-		},
+	"clean_arch": {
+		main:          "cmd/api/main.go",
 		handlerImport: `httpapi "%s/internal/infrastructure/http"`,
 		handlerExpr:   "httpapi.NewAPI()",
-		files: func(framework string) []common.File {
-			return []common.File{
-				{TemplatePath: "templates/go/base/go.mod.tmpl", OutputPath: "go.mod"},
-				{TemplatePath: "templates/go/base/go.sum.tmpl", OutputPath: "go.sum"},
-				{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-				{TemplatePath: "templates/go/architectures/clean_arch/README.md.tmpl", OutputPath: "README.md"},
-				{TemplatePath: fmt.Sprintf("templates/go/frameworks/%s/main.go.tmpl", framework), OutputPath: "cmd/api/main.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/domain/order.go.tmpl", OutputPath: "internal/domain/order.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/domain/errors.go.tmpl", OutputPath: "internal/domain/errors.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/application/create_order.go.tmpl", OutputPath: "internal/application/create_order.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/application/dto.go.tmpl", OutputPath: "internal/application/dto.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/ports/repository.go.tmpl", OutputPath: "internal/ports/repository.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/infrastructure/persistence/repository.go.tmpl", OutputPath: "internal/infrastructure/persistence/repository.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/infrastructure/http/handler.go.tmpl", OutputPath: "internal/infrastructure/http/handler.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/infrastructure/messaging/producer.go.tmpl", OutputPath: "internal/infrastructure/messaging/producer.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/pkg/validator/validator.go.tmpl", OutputPath: "pkg/validator/validator.go"},
-				{TemplatePath: "templates/go/architectures/clean_arch/migrations/000001_init.sql.tmpl", OutputPath: "migrations/000001_init.sql"},
-			}
+		files: []file{
+			{"domain/order.go", "internal/domain/order.go"},
+			{"domain/errors.go", "internal/domain/errors.go"},
+			{"application/create_order.go", "internal/application/create_order.go"},
+			{"application/dto.go", "internal/application/dto.go"},
+			{"ports/repository.go", "internal/ports/repository.go"},
+			{"infrastructure/persistence/repository.go", "internal/infrastructure/persistence/repository.go"},
+			{"infrastructure/http/handler.go", "internal/infrastructure/http/handler.go"},
+			{"infrastructure/messaging/producer.go", "internal/infrastructure/messaging/producer.go"},
+			{"pkg/validator/validator.go", "pkg/validator/validator.go"},
+			{"migrations/000001_init.sql", "migrations/000001_init.sql"},
 		},
 	},
 }
 
-func Generate(destination string, config types.ProjectConfig, templates fs.FS) (err error) {
-	if !frameworks[config.Framework] {
-		return fmt.Errorf("framework Go não suportado: %s", config.Framework)
-	}
-	normalizedArch := normalizeArchitecture(config.Architecture)
-	archDef, ok := architectures[normalizedArch]
+// Plan monta o projeto Go. Framework e arquitetura já foram validados pelo
+// registry em internal/generator.
+func Plan(_ string, config types.ProjectConfig) (common.Plan, error) {
+	arch, ok := architectures[config.Architecture]
 	if !ok {
-		return fmt.Errorf("arquitetura Go não suportada: %s", config.Architecture)
+		return common.Plan{}, fmt.Errorf("arquitetura Go não suportada: %s", config.Architecture)
+	}
+	archDir := path.Join("templates/go/architectures", config.Architecture)
+
+	files := []common.File{
+		{TemplatePath: "templates/go/base/go.mod.tmpl", OutputPath: "go.mod"},
+		{TemplatePath: "templates/go/base/go.sum.tmpl", OutputPath: "go.sum"},
+		{TemplatePath: "templates/go/base/.gitignore.tmpl", OutputPath: ".gitignore"},
+		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
+		{TemplatePath: path.Join("templates/go/frameworks", config.Framework, "main.go.tmpl"), OutputPath: arch.main},
+	}
+	for _, f := range arch.files {
+		files = append(files, common.File{TemplatePath: path.Join(archDir, f.template+".tmpl"), OutputPath: f.output})
 	}
 
-	root, err := common.CreateProjectDirectory(destination)
-	if err != nil {
-		return err
-	}
-	complete := false
-	defer func() {
-		if !complete {
-			_ = os.RemoveAll(root)
-		}
-	}()
-
-	for _, directory := range archDef.directories {
-		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(directory)), 0755); err != nil {
-			return fmt.Errorf("criar diretório %s: %w", directory, err)
-		}
-	}
-
-	goModule := "example.com/" + project.ProjectSlug(config.ProjectName)
-	handlerImport := ""
-	if archDef.handlerImport != "" {
-		handlerImport = fmt.Sprintf(archDef.handlerImport, goModule)
-	}
+	goModule := "example.com/" + project.Slug(config.ProjectName)
 	data := templateData{
-		ProjectName:   config.ProjectName,
-		GoModule:      goModule,
-		Framework:     config.Framework,
-		Architecture:  config.Architecture,
-		HandlerImport: handlerImport,
-		HandlerExpr:   archDef.handlerExpr,
+		BaseData:    common.NewBaseData(config),
+		GoModule:    goModule,
+		HandlerExpr: arch.handlerExpr,
+	}
+	if arch.handlerImport != "" {
+		data.HandlerImport = fmt.Sprintf(arch.handlerImport, goModule)
 	}
 
-	files := archDef.files(config.Framework)
-	if err := common.WriteFiles(root, templates, data, files); err != nil {
-		return err
-	}
-
-	complete = true
-	return nil
+	return common.Plan{Files: files, Data: data}, nil
 }

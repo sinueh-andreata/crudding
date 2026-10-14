@@ -2,8 +2,6 @@ package node
 
 import (
 	"fmt"
-	"io/fs"
-	"os"
 	"path"
 
 	"crudding/internal/generator/common"
@@ -11,13 +9,17 @@ import (
 	"crudding/internal/types"
 )
 
+var Runtimes = []string{"js", "ts"}
+
+var Frameworks = []string{"raw", "express", "nest", "fastify"}
+
+var Architectures = []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
+
 type templateData struct {
-	ProjectName  string
-	ProjectSlug  string
-	Runtime      string
-	Framework    string
-	Architecture string
-	EntryScript  string
+	common.BaseData
+	ProjectSlug string
+	Runtime     string
+	EntryScript string
 }
 
 // layout descreve uma arquitetura. Os caminhos não têm extensão: cada arquivo
@@ -109,60 +111,38 @@ var layouts = map[string]layout{
 	},
 }
 
-var frameworks = map[string]bool{"raw": true, "express": true, "nest": true, "fastify": true}
-
-func Generate(destination string, config types.ProjectConfig, templates fs.FS) (err error) {
-	if !frameworks[config.Framework] {
-		return fmt.Errorf("framework Node não suportado: %s", config.Framework)
-	}
-	if config.Runtime != "js" && config.Runtime != "ts" {
-		return fmt.Errorf("runtime Node não suportado: %s", config.Runtime)
-	}
+// Plan monta o projeto Node. Runtime, framework e arquitetura já foram
+// validados pelo registry em internal/generator.
+func Plan(_ string, config types.ProjectConfig) (common.Plan, error) {
 	layout, ok := layouts[config.Architecture]
 	if !ok {
-		return fmt.Errorf("arquitetura não suportada: %s", config.Architecture)
+		return common.Plan{}, fmt.Errorf("arquitetura Node não suportada: %s", config.Architecture)
 	}
-	root, err := common.CreateProjectDirectory(destination)
-	if err != nil {
-		return err
-	}
-	complete := false
-	defer func() {
-		if !complete {
-			_ = os.RemoveAll(root)
-		}
-	}()
+	ext := "." + config.Runtime
 
-	runtime := config.Runtime
-	data := templateData{
-		ProjectName:  config.ProjectName,
-		ProjectSlug:  project.ProjectSlug(config.ProjectName),
-		Runtime:      runtime,
-		Framework:    config.Framework,
-		Architecture: config.Architecture,
-		EntryScript:  layout.entry + "." + runtime,
-	}
 	files := []common.File{
 		{TemplatePath: "templates/node/base/package.json.tmpl", OutputPath: "package.json"},
 		{TemplatePath: "templates/node/base/README.md.tmpl", OutputPath: "README.md"},
 		{TemplatePath: "templates/node/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-		{TemplatePath: fmt.Sprintf("templates/node/frameworks/%s/server.%s.tmpl", config.Framework, runtime), OutputPath: path.Join(layout.httpDir, "server."+runtime)},
+		{TemplatePath: path.Join("templates/node/frameworks", config.Framework, "server"+ext+".tmpl"), OutputPath: path.Join(layout.httpDir, "server"+ext)},
 	}
-	for _, file := range layout.files {
-		files = append(files, common.File{
-			TemplatePath: fmt.Sprintf("templates/node/architectures/%s/%s.%s.tmpl", config.Architecture, file, runtime),
-			OutputPath:   file + "." + runtime,
-		})
+	sources := make([]string, len(layout.files))
+	for index, file := range layout.files {
+		sources[index] = file + ext
 	}
-	if runtime == "ts" {
+	files = append(files, common.FilesFrom(path.Join("templates/node/architectures", config.Architecture), "", sources...)...)
+	if config.Runtime == "ts" {
 		files = append(files,
 			common.File{TemplatePath: "templates/node/base/tsconfig.json.tmpl", OutputPath: "tsconfig.json"},
 			common.File{TemplatePath: "templates/node/base/http-types.ts.tmpl", OutputPath: path.Join(layout.httpDir, "types.ts")},
 		)
 	}
-	if err := common.WriteFiles(root, templates, data, files); err != nil {
-		return err
+
+	data := templateData{
+		BaseData:    common.NewBaseData(config),
+		ProjectSlug: project.Slug(config.ProjectName),
+		Runtime:     config.Runtime,
+		EntryScript: layout.entry + ext,
 	}
-	complete = true
-	return nil
+	return common.Plan{Files: files, Data: data}, nil
 }

@@ -5,14 +5,27 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
 type File struct {
 	TemplatePath string
 	OutputPath   string
+}
+
+// FilesFrom aplica a convenção "um template por arquivo": cada caminho relativo
+// rel vira templateDir/rel.tmpl -> outputDir/rel.
+func FilesFrom(templateDir, outputDir string, rels ...string) []File {
+	files := make([]File, len(rels))
+	for index, rel := range rels {
+		files[index] = File{
+			TemplatePath: path.Join(templateDir, rel+".tmpl"),
+			OutputPath:   path.Join(outputDir, rel),
+		}
+	}
+	return files
 }
 
 func CreateProjectDirectory(destination string) (string, error) {
@@ -45,20 +58,6 @@ func WriteFiles(root string, templates fs.FS, data any, files []File) error {
 		}
 		if err := os.WriteFile(outputPath, output.Bytes(), 0644); err != nil {
 			return fmt.Errorf("gravar arquivo %s: %w", file.OutputPath, err)
-		}
-	}
-	return nil
-}
-
-func CreatePythonPackages(root, directory string) error {
-	parts := strings.Split(filepath.ToSlash(directory), "/")
-	for index := range parts {
-		packageDir := filepath.Join(root, filepath.Join(parts[:index+1]...))
-		if err := os.MkdirAll(packageDir, 0755); err != nil {
-			return fmt.Errorf("criar pacote Python %s: %w", packageDir, err)
-		}
-		if err := os.WriteFile(filepath.Join(packageDir, "__init__.py"), nil, 0644); err != nil {
-			return fmt.Errorf("criar pacote Python %s: %w", packageDir, err)
 		}
 	}
 	return nil

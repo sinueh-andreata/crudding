@@ -20,7 +20,7 @@ func TestProjectNameValidationAndSlug(t *testing.T) {
 			t.Errorf("ReadProjectName(%q) should fail", name)
 		}
 	}
-	if got := ProjectSlug("Minha API_2"); got != "minha-api-2" {
-		t.Fatalf("ProjectSlug() = %q", got)
+	if got := Slug("Minha API_2"); got != "minha-api-2" {
+		t.Fatalf("Slug() = %q", got)
 	}
 }

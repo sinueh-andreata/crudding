@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func ProjectSlug(name string) string {
+func Slug(name string) string {
 	var slug strings.Builder
 	lastHyphen := false
 	for _, character := range strings.ToLower(name) {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,26 +13,44 @@ import (
 	"crudding/internal/types"
 )
 
+// errCancelled sinaliza que o usuário saiu do menu; não é tratado como falha.
+var errCancelled = errors.New("cancelado pelo usuário")
+
+func choose(title string, options []string) (string, error) {
+	choice, confirmed, err := models.ChooseOption(title, options)
+	if err != nil {
+		return "", err
+	}
+	if !confirmed {
+		return "", errCancelled
+	}
+	return choice, nil
+}
+
 func run() error {
-	language, confirmed, err := models.ChooseOption("escolha a linguagem", []string{"python", "go", "node"})
-	if err != nil || !confirmed {
+	languages := generator.Languages()
+	names := make([]string, len(languages))
+	for index, language := range languages {
+		names[index] = language.Name
+	}
+	name, err := choose("escolha a linguagem", names)
+	if err != nil {
 		return err
 	}
+	language, _ := generator.Lookup(name)
 
 	runtime := ""
-	if language == "node" {
-		runtime, confirmed, err = models.ChooseOption("escolha o runtime", []string{"js", "ts"})
-		if err != nil || !confirmed {
+	if len(language.Runtimes) > 0 {
+		if runtime, err = choose("escolha o runtime", language.Runtimes); err != nil {
 			return err
 		}
 	}
-
-	framework, confirmed, err := models.ChooseOption("escolha o framework", frameworkOptionsFor(language))
-	if err != nil || !confirmed {
+	framework, err := choose("escolha o framework", language.Frameworks)
+	if err != nil {
 		return err
 	}
-	architecture, confirmed, err := models.ChooseOption("escolha a arquitetura", architectureOptionsFor(language))
-	if err != nil || !confirmed {
+	architecture, err := choose("escolha a arquitetura", language.Architectures)
+	if err != nil {
 		return err
 	}
 	projectName, err := project.ReadProjectName(os.Stdin, os.Stdout)
@@ -44,7 +63,7 @@ func run() error {
 	}
 	config := types.ProjectConfig{
 		ProjectName:  projectName,
-		Language:     language,
+		Language:     language.Name,
 		Runtime:      runtime,
 		Framework:    framework,
 		Architecture: architecture,
@@ -56,42 +75,16 @@ func run() error {
 
 	fmt.Printf("\nProjeto gerado em: %s\n", projectDirectory)
 	if runtime != "" {
-		fmt.Printf("Linguagem/motor: %s/%s\n", language, runtime)
+		fmt.Printf("Linguagem/motor: %s/%s\n", language.Name, runtime)
 	} else {
-		fmt.Printf("Linguagem: %s\n", language)
+		fmt.Printf("Linguagem: %s\n", language.Name)
 	}
 	fmt.Printf("Framework: %s\nArquitetura: %s\n", framework, architecture)
 	return nil
 }
 
-func frameworkOptionsFor(language string) []string {
-	switch language {
-	case "python":
-		return []string{"raw", "fastapi", "django", "flask"}
-	case "go":
-		return []string{"raw", "gin", "fiber", "chi"}
-	case "node":
-		return []string{"raw", "express", "nest", "fastify"}
-	default:
-		return nil
-	}
-}
-
-func architectureOptionsFor(language string) []string {
-	switch language {
-	case "python":
-		return []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
-	case "go":
-		return []string{"flat", "layered", "modular", "hexagonal", "clean arch"}
-	case "node":
-		return []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
-	default:
-		return nil
-	}
-}
-
 func main() {
-	if err := run(); err != nil {
+	if err := run(); err != nil && !errors.Is(err, errCancelled) {
 		fmt.Fprintf(os.Stderr, "crudding: %v\n", err)
 		os.Exit(1)
 	}

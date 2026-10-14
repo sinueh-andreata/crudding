@@ -11,98 +11,133 @@ import (
 	"crudding/internal/types"
 )
 
-func TestGenerateAllTemplateCombinations(t *testing.T) {
-	templates := os.DirFS(filepath.Join("..", ".."))
-	pythonArchitectures := []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
-	nodeArchitectures := []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
-	golangArchitectures := []string{"flat", "layered", "modular", "hexagonal", "clean arch"}
+// templates aponta para a raiz do repositório, onde fica a pasta templates/.
+var templates = os.DirFS(filepath.Join("..", ".."))
 
-	cases := []types.ProjectConfig{}
-	for _, framework := range []string{"raw", "fastapi", "django", "flask"} {
-		for _, architecture := range pythonArchitectures {
-			cases = append(cases, types.ProjectConfig{ProjectName: "Sample", Language: "python", Framework: framework, Architecture: architecture})
+// Arquivos que devem existir, por linguagem e arquitetura. No Node os caminhos
+// não têm extensão: o runtime (.js/.ts) é acrescentado na checagem.
+var requiredFiles = map[string]map[string][]string{
+	"go": {
+		"flat":       {"main.go", "tasks.go", "tasks_test.go"},
+		"layered":    {"cmd/api/main.go", "internal/router/router.go", "internal/handlers/handler.go", "internal/services/service.go", "internal/models/item.go"},
+		"modular":    {"cmd/api/main.go", "cmd/worker/main.go", "internal/router/router.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/product/product.go", "internal/product/service.go", "internal/platform/database/database.go"},
+		"hexagonal":  {"cmd/rest/main.go", "cmd/grpc/main.go", "internal/domain/product.go", "internal/application/service.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/http/handler.go", "internal/adapters/grpc/server.go", "internal/adapters/postgres/repository.go"},
+		"clean_arch": {"cmd/api/main.go", "internal/domain/order.go", "internal/domain/errors.go", "internal/application/create_order.go", "internal/application/dto.go", "internal/ports/repository.go", "internal/infrastructure/persistence/repository.go", "internal/infrastructure/http/handler.go", "internal/infrastructure/messaging/producer.go", "pkg/validator/validator.go", "migrations/000001_init.sql"},
+	},
+	"node": {
+		"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},
+		"layered":    {"src/main", "src/http/server", "src/routes/index", "src/controllers/user-controller", "src/services/order-service", "src/models/user"},
+		"modular":    {"src/main", "src/shared/http/server", "src/shared/database", "src/modules/catalog/index", "src/modules/orders/order-service"},
+		"hexagonal":  {"src/entrypoints/main", "src/adapters/http/server", "src/adapters/http/product-controller", "src/domain/product-manager", "src/ports/product-repository"},
+		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
+	},
+	"python": {
+		"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/main.py", "tests/test_modulo.py"},
+		"layered":    {"src/app/controllers/user_controller.py", "src/app/models/errors.py", "src/app/models/order.py", "src/app/router/api.py", "src/app/router/router.py"},
+		"modular":    {"src/app/catalog/service.py", "src/app/orders/views.py", "src/app/shared/api.py", "src/app/shared/errors.py"},
+		"hexagonal":  {"src/app/domain/entities.py", "src/app/application/product_service.py", "src/app/ports/product_repository.py", "src/app/infrastructure/in_memory_product_repository.py", "src/app/routers/api.py", "src/app/main.py"},
+		"clean_arch": {"src/app/domain/model/order.py", "src/app/application/use_cases/create_order.py", "src/app/application/use_cases/pay_order.py", "src/app/application/port/outbound/order_repository.py", "src/app/interface_adapters/controllers/order_controller.py", "src/app/frameworks_and_drivers/web/api.py", "src/app/bootstrap.py"},
+	},
+}
+
+// Arquivos que NÃO devem existir (camadas removidas propositalmente).
+var forbiddenFiles = map[string]map[string][]string{
+	"go": {
+		"layered": {"internal/repositories"},
+		"modular": {"internal/order/repository.go", "internal/user/repository.go"},
+	},
+}
+
+// Trechos de código que comprovam que a arquitetura gerou lógica funcional.
+var codeChecks = map[string]map[string][2]string{
+	"python": {
+		"flat":       {"src/sample/modulo.py", "class TaskStore"},
+		"layered":    {"src/app/router/api.py", "def dispatch"},
+		"modular":    {"src/app/catalog/service.py", "def add_product"},
+		"hexagonal":  {"src/app/routers/api.py", "def dispatch"},
+		"clean_arch": {"src/app/application/use_cases/create_order.py", "class CreateOrder"},
+	},
+}
+
+// allConfigs monta a matriz completa a partir do registry de linguagens.
+func allConfigs() []types.ProjectConfig {
+	var configs []types.ProjectConfig
+	for _, language := range Languages() {
+		runtimes := language.Runtimes
+		if len(runtimes) == 0 {
+			runtimes = []string{""}
 		}
-	}
-	for _, framework := range []string{"raw", "gin", "fiber", "chi"} {
-		for _, architecture := range golangArchitectures {
-			cases = append(cases, types.ProjectConfig{ProjectName: "Sample", Language: "go", Framework: framework, Architecture: architecture})
-		}
-	}
-	for _, framework := range []string{"raw", "express", "nest", "fastify"} {
-		for _, runtime := range []string{"js", "ts"} {
-			for _, architecture := range nodeArchitectures {
-				cases = append(cases, types.ProjectConfig{ProjectName: "Sample", Language: "node", Runtime: runtime, Framework: framework, Architecture: architecture})
+		for _, framework := range language.Frameworks {
+			for _, runtime := range runtimes {
+				for _, architecture := range language.Architectures {
+					configs = append(configs, types.ProjectConfig{ProjectName: "Sample", Language: language.Name, Runtime: runtime, Framework: framework, Architecture: architecture})
+				}
 			}
 		}
 	}
+	return configs
+}
 
-	for index, config := range cases {
+func assertFilesExist(t *testing.T, root string, files ...string) {
+	t.Helper()
+	for _, file := range files {
+		if _, err := os.Stat(filepath.Join(root, file)); err != nil {
+			t.Errorf("arquivo %s ausente: %v", file, err)
+		}
+	}
+}
+
+func assertFilesAbsent(t *testing.T, root string, files ...string) {
+	t.Helper()
+	for _, file := range files {
+		if _, err := os.Stat(filepath.Join(root, file)); !os.IsNotExist(err) {
+			t.Errorf("%s não deveria existir", file)
+		}
+	}
+}
+
+func assertFileContains(t *testing.T, root, file, snippet string) {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(root, file))
+	if err != nil || !strings.Contains(string(content), snippet) {
+		t.Errorf("%s não contém %q: %v", file, snippet, err)
+	}
+}
+
+func TestGenerateAllTemplateCombinations(t *testing.T) {
+	for _, config := range allConfigs() {
 		t.Run(config.Language+"/"+config.Framework+"/"+config.Runtime+"/"+config.Architecture, func(t *testing.T) {
 			destination := filepath.Join(t.TempDir(), "Sample")
 			if err := Generate(destination, config, templates); err != nil {
-				t.Fatalf("Generate() error = %v (case %d)", err, index)
+				t.Fatalf("Generate() error = %v", err)
 			}
 
-			readmePath := filepath.Join(destination, "README.md")
-			readmeContent, err := os.ReadFile(readmePath)
-			if err != nil {
-				t.Fatalf("README.md não encontrado para %+v: %v", config, err)
-			}
-			if len(readmeContent) == 0 {
-				t.Fatalf("README.md está vazio para %+v", config)
+			readme, err := os.ReadFile(filepath.Join(destination, "README.md"))
+			if err != nil || len(readme) == 0 {
+				t.Fatalf("README.md ausente ou vazio: %v", err)
 			}
 
-			if config.Language == "go" {
-				for _, requiredFile := range []string{"go.mod", "go.sum", ".gitignore"} {
-					if _, err := os.Stat(filepath.Join(destination, requiredFile)); err != nil {
-						t.Errorf("arquivo obrigatório %s não encontrado em %+v", requiredFile, config)
-					}
+			files := requiredFiles[config.Language][config.Architecture]
+			if len(files) == 0 {
+				t.Fatalf("sem arquivos obrigatórios cadastrados para %s/%s", config.Language, config.Architecture)
+			}
+			if config.Runtime != "" {
+				withExt := make([]string, len(files))
+				for index, file := range files {
+					withExt[index] = file + "." + config.Runtime
 				}
-
-				switch config.Architecture {
-				case "flat":
-					for _, f := range []string{"main.go", "tasks.go", "tasks_test.go"} {
-						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
-							t.Errorf("arquivo flat %s ausente: %v", f, err)
-						}
-					}
-				case "layered":
-					for _, f := range []string{"cmd/api/main.go", "internal/router/router.go", "internal/handlers/handler.go", "internal/services/service.go", "internal/models/item.go"} {
-						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
-							t.Errorf("arquivo layered %s ausente: %v", f, err)
-						}
-					}
-					if _, err := os.Stat(filepath.Join(destination, "internal/repositories")); !os.IsNotExist(err) {
-						t.Errorf("camada de repositories não deveria existir em layered")
-					}
-				case "modular":
-					for _, f := range []string{"cmd/api/main.go", "cmd/worker/main.go", "internal/router/router.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/product/product.go", "internal/product/service.go", "internal/platform/database/database.go"} {
-						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
-							t.Errorf("arquivo modular %s ausente: %v", f, err)
-						}
-					}
-					if _, err := os.Stat(filepath.Join(destination, "internal/order/repository.go")); !os.IsNotExist(err) {
-						t.Errorf("repository.go não deveria existir em modular order")
-					}
-					if _, err := os.Stat(filepath.Join(destination, "internal/user/repository.go")); !os.IsNotExist(err) {
-						t.Errorf("repository.go não deveria existir em modular user")
-					}
-				case "hexagonal":
-					for _, f := range []string{"cmd/rest/main.go", "cmd/grpc/main.go", "internal/domain/product.go", "internal/application/service.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/http/handler.go", "internal/adapters/grpc/server.go", "internal/adapters/postgres/repository.go"} {
-						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
-							t.Errorf("arquivo hexagonal %s ausente: %v", f, err)
-						}
-					}
-				case "clean arch":
-					for _, f := range []string{"cmd/api/main.go", "internal/domain/order.go", "internal/domain/errors.go", "internal/application/create_order.go", "internal/application/dto.go", "internal/ports/repository.go", "internal/infrastructure/persistence/repository.go", "internal/infrastructure/http/handler.go", "internal/infrastructure/messaging/producer.go", "pkg/validator/validator.go", "migrations/000001_init.sql"} {
-						if _, err := os.Stat(filepath.Join(destination, f)); err != nil {
-							t.Errorf("arquivo clean arch %s ausente: %v", f, err)
-						}
-					}
-				}
+				files = withExt
+			}
+			assertFilesExist(t, destination, files...)
+			assertFilesAbsent(t, destination, forbiddenFiles[config.Language][config.Architecture]...)
+			if check, ok := codeChecks[config.Language][config.Architecture]; ok {
+				assertFileContains(t, destination, check[0], check[1])
 			}
 
-			if config.Language == "node" {
+			switch config.Language {
+			case "go":
+				assertFilesExist(t, destination, "go.mod", "go.sum", ".gitignore")
+			case "node":
 				contents, err := os.ReadFile(filepath.Join(destination, "package.json"))
 				if err != nil {
 					t.Fatal(err)
@@ -111,64 +146,18 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 				if err := json.Unmarshal(contents, &parsed); err != nil {
 					t.Fatalf("invalid package.json: %v", err)
 				}
-				requiredFiles := map[string][]string{
-					"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},
-					"layered":    {"src/main", "src/http/server", "src/routes/index", "src/controllers/user-controller", "src/services/order-service", "src/models/user"},
-					"modular":    {"src/main", "src/shared/http/server", "src/shared/database", "src/modules/catalog/index", "src/modules/orders/order-service"},
-					"hexagonal":  {"src/entrypoints/main", "src/adapters/http/server", "src/adapters/http/product-controller", "src/domain/product-manager", "src/ports/product-repository"},
-					"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
-				}
-				for _, requiredFile := range requiredFiles[config.Architecture] {
-					if _, err := os.Stat(filepath.Join(destination, requiredFile+"."+config.Runtime)); err != nil {
-						t.Errorf("arquivo Node %s.%s ausente: %v", requiredFile, config.Runtime, err)
-					}
-				}
 				_, err = os.Stat(filepath.Join(destination, "tsconfig.json"))
 				if hasTsconfig := err == nil; hasTsconfig != (config.Runtime == "ts") {
 					t.Errorf("tsconfig.json presente = %v para runtime %s", hasTsconfig, config.Runtime)
 				}
-				if !strings.Contains(string(readmeContent), "- Arquitetura: "+config.Architecture) {
-					t.Errorf("README não identifica a arquitetura %s", config.Architecture)
+			case "python":
+				if config.Architecture == "flat" {
+					assertFileContains(t, destination, "tests/test_modulo.py", "def test_task_store_create_complete_and_remove")
 				}
 			}
 
-			if config.Language == "python" {
-				if !strings.Contains(string(readmeContent), "- Arquitetura: "+config.Architecture) {
-					t.Errorf("README não identifica a arquitetura %s", config.Architecture)
-				}
-				requiredFiles := map[string][]string{
-					"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/main.py", "tests/test_modulo.py"},
-					"layered":    {"src/app/controllers/user_controller.py", "src/app/models/errors.py", "src/app/models/order.py", "src/app/router/api.py", "src/app/router/router.py"},
-					"modular":    {"src/app/catalog/service.py", "src/app/orders/views.py", "src/app/shared/api.py", "src/app/shared/errors.py"},
-					"hexagonal":  {"src/app/domain/entities.py", "src/app/application/product_service.py", "src/app/ports/product_repository.py", "src/app/infrastructure/in_memory_product_repository.py", "src/app/routers/api.py", "src/app/main.py"},
-					"clean_arch": {"src/app/domain/model/order.py", "src/app/application/use_cases/create_order.py", "src/app/application/use_cases/pay_order.py", "src/app/application/port/outbound/order_repository.py", "src/app/interface_adapters/controllers/order_controller.py", "src/app/frameworks_and_drivers/web/api.py", "src/app/bootstrap.py"},
-				}
-				for _, requiredFile := range requiredFiles[config.Architecture] {
-					if _, err := os.Stat(filepath.Join(destination, requiredFile)); err != nil {
-						t.Errorf("arquivo Python %s ausente para arquitetura %s: %v", requiredFile, config.Architecture, err)
-					}
-				}
-				if config.Architecture == "flat" {
-					testContents, err := os.ReadFile(filepath.Join(destination, "tests/test_modulo.py"))
-					if err != nil || !strings.Contains(string(testContents), "def test_task_store_create_complete_and_remove") {
-						t.Errorf("teste do módulo flat não foi gerado corretamente: %v", err)
-					}
-				}
-				codeChecks := map[string]struct {
-					path    string
-					snippet string
-				}{
-					"flat":       {"src/sample/modulo.py", "class TaskStore"},
-					"layered":    {"src/app/router/api.py", "def dispatch"},
-					"modular":    {"src/app/catalog/service.py", "def add_product"},
-					"hexagonal":  {"src/app/routers/api.py", "def dispatch"},
-					"clean_arch": {"src/app/application/use_cases/create_order.py", "class CreateOrder"},
-				}
-				codeCheck := codeChecks[config.Architecture]
-				code, err := os.ReadFile(filepath.Join(destination, codeCheck.path))
-				if err != nil || !strings.Contains(string(code), codeCheck.snippet) {
-					t.Errorf("código funcional não gerado em %s para arquitetura %s: %v", codeCheck.path, config.Architecture, err)
-				}
+			if config.Language != "go" && !strings.Contains(string(readme), "- Arquitetura: "+config.Architecture) {
+				t.Errorf("README não identifica a arquitetura %s", config.Architecture)
 			}
 		})
 	}
@@ -308,7 +297,7 @@ func TestGeneratedGoRawScaffoldsCompile(t *testing.T) {
 		t.Skip("go is not installed")
 	}
 	templates := os.DirFS(filepath.Join("..", ".."))
-	for _, architecture := range []string{"flat", "layered", "modular", "hexagonal", "clean arch"} {
+	for _, architecture := range []string{"flat", "layered", "modular", "hexagonal", "clean_arch"} {
 		t.Run(architecture, func(t *testing.T) {
 			destination := filepath.Join(t.TempDir(), "Sample")
 			config := types.ProjectConfig{ProjectName: "Sample", Language: "go", Framework: "raw", Architecture: architecture}
@@ -390,7 +379,7 @@ func TestDemoAPI(t *testing.T) {
 	if discount.Code != http.StatusOK || !strings.Contains(discount.Body.String(), ` + "`" + `"price":288` + "`" + `) { t.Fatalf("discount = %d %s", discount.Code, discount.Body.String()) }
 	if invalid := request(http.MethodPost, "/products/prod-1/discount", ` + "`" + `{"percent":100}` + "`" + `); invalid.Code != http.StatusUnprocessableEntity { t.Fatalf("invalid discount status = %d", invalid.Code) }
 }`,
-	"clean arch": `package main
+	"clean_arch": `package main
 import (
 	"net/http"
 	"net/http/httptest"
