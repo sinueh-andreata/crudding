@@ -6,7 +6,6 @@ import (
 
 	"crudding/internal/generator/common"
 	"crudding/internal/project"
-	"crudding/internal/types"
 )
 
 var Runtimes = []string{"js", "ts"}
@@ -113,7 +112,7 @@ var layouts = map[string]layout{
 
 // Plan monta o projeto Node. Runtime, framework e arquitetura já foram
 // validados pelo registry em internal/generator.
-func Plan(_ string, config types.ProjectConfig) (common.Plan, error) {
+func Plan(_ string, config project.Config) (common.Plan, error) {
 	layout, ok := layouts[config.Architecture]
 	if !ok {
 		return common.Plan{}, fmt.Errorf("arquitetura Node não suportada: %s", config.Architecture)

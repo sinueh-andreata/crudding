@@ -1,4 +1,4 @@
-package models
+package tui
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type menu struct {
+type Menu struct {
 	title     string
 	options   []string
 	selected  int
@@ -15,11 +15,27 @@ type menu struct {
 	confirmed bool
 }
 
-func (m menu) Init() tea.Cmd {
+func NewMenu(title string, options []string) Menu {
+	return Menu{title: title, options: options, selected: -1}
+}
+
+func (m Menu) Cursor() int {
+	return m.cursor
+}
+
+func (m Menu) Selected() int {
+	return m.selected
+}
+
+func (m Menu) Confirmed() bool {
+	return m.confirmed
+}
+
+func (m Menu) Init() tea.Cmd {
 	return nil
 }
 
-func (m menu) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+func (m Menu) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	key, ok := message.(tea.KeyMsg)
 	if !ok {
 		return m, nil
@@ -47,7 +63,7 @@ func (m menu) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m menu) View() string {
+func (m Menu) View() string {
 	var view strings.Builder
 	fmt.Fprintf(&view, "crudding: %s\n\n", m.title)
 	for index, option := range m.options {
@@ -66,12 +82,12 @@ func (m menu) View() string {
 }
 
 func ChooseOption(title string, options []string) (string, bool, error) {
-	initial := menu{title: title, options: options, selected: -1}
+	initial := NewMenu(title, options)
 	final, err := tea.NewProgram(initial).Run()
 	if err != nil {
 		return "", false, err
 	}
-	result, ok := final.(menu)
+	result, ok := final.(Menu)
 	if !ok || !result.confirmed || result.selected < 0 || result.selected >= len(options) {
 		return "", false, nil
 	}

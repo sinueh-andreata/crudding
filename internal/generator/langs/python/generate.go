@@ -2,14 +2,12 @@ package python
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"crudding/internal/generator/common"
 	"crudding/internal/project"
-	"crudding/internal/types"
 )
 
 var Frameworks = []string{"raw", "fastapi", "django", "flask"}
@@ -123,7 +121,7 @@ var layouts = map[string]layout{
 
 // Plan monta o projeto Python. Framework e arquitetura já foram validados pelo
 // registry em internal/generator.
-func Plan(destination string, config types.ProjectConfig) (common.Plan, error) {
+func Plan(destination string, config project.Config) (common.Plan, error) {
 	layout, ok := layouts[config.Architecture]
 	if !ok {
 		return common.Plan{}, fmt.Errorf("arquitetura Python não suportada: %s", config.Architecture)
@@ -168,7 +166,7 @@ func Plan(destination string, config types.ProjectConfig) (common.Plan, error) {
 	return common.Plan{
 		Files:   files,
 		Data:    data,
-		Prepare: func(root string) error { return createPackages(root, packages) },
+		Prepare: func(root string) error { return common.CreatePackages(root, packages, nil) },
 	}, nil
 }
 
@@ -182,23 +180,6 @@ func packageName(destination string) string {
 		return "project_" + name
 	}
 	return name
-}
-
-// createPackages cria cada diretório (e seus ancestrais) com um __init__.py.
-func createPackages(root string, directories []string) error {
-	for _, directory := range directories {
-		parts := strings.Split(directory, "/")
-		for index := range parts {
-			packageDir := filepath.Join(root, filepath.Join(parts[:index+1]...))
-			if err := os.MkdirAll(packageDir, 0755); err != nil {
-				return fmt.Errorf("criar pacote Python %s: %w", packageDir, err)
-			}
-			if err := os.WriteFile(filepath.Join(packageDir, "__init__.py"), nil, 0644); err != nil {
-				return fmt.Errorf("criar pacote Python %s: %w", packageDir, err)
-			}
-		}
-	}
-	return nil
 }
 
 func module(file string) string {

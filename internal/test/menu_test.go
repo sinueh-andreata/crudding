@@ -1,24 +1,25 @@
-package models
+package test
 
 import (
 	"testing"
 
+	"crudding/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestMenuNavigationSelectionAndConfirmation(t *testing.T) {
-	current := menu{title: "test", options: []string{"python", "go", "node"}, selected: -1}
+	current := tui.NewMenu("test", []string{"python", "go", "node"})
 
 	updated, _ := current.Update(tea.KeyMsg{Type: tea.KeyDown})
-	current = updated.(menu)
-	if current.cursor != 1 {
-		t.Fatalf("cursor = %d, want 1", current.cursor)
+	current = updated.(tui.Menu)
+	if current.Cursor() != 1 {
+		t.Fatalf("cursor = %d, want 1", current.Cursor())
 	}
 	updated, _ = current.Update(tea.KeyMsg{Type: tea.KeySpace})
-	current = updated.(menu)
+	current = updated.(tui.Menu)
 	updated, command := current.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	current = updated.(menu)
-	if !current.confirmed || command == nil || current.selected != 1 {
+	current = updated.(tui.Menu)
+	if !current.Confirmed() || command == nil || current.Selected() != 1 {
 		t.Fatal("menu should select and confirm the focused option")
 	}
 }

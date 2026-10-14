@@ -1,6 +1,6 @@
-package types
+package project
 
-type ProjectConfig struct {
+type Config struct {
 	ProjectName  string
 	Language     string
 	Runtime      string

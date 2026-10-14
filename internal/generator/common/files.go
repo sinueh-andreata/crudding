@@ -48,17 +48,25 @@ func WriteFiles(root string, templates fs.FS, data any, files []File) error {
 		if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 			return fmt.Errorf("criar diretório para %s: %w", file.OutputPath, err)
 		}
-		parsed, err := template.ParseFS(templates, file.TemplatePath)
+		content, err := render(templates, file.TemplatePath, data)
 		if err != nil {
-			return fmt.Errorf("ler template %s: %w", file.TemplatePath, err)
+			return err
 		}
-		var output bytes.Buffer
-		if err := parsed.ExecuteTemplate(&output, filepath.Base(file.TemplatePath), data); err != nil {
-			return fmt.Errorf("renderizar template %s: %w", file.TemplatePath, err)
-		}
-		if err := os.WriteFile(outputPath, output.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(outputPath, content, 0644); err != nil {
 			return fmt.Errorf("gravar arquivo %s: %w", file.OutputPath, err)
 		}
 	}
 	return nil
+}
+
+func render(templates fs.FS, templatePath string, data any) ([]byte, error) {
+	parsed, err := template.ParseFS(templates, templatePath)
+	if err != nil {
+		return nil, fmt.Errorf("ler template %s: %w", templatePath, err)
+	}
+	var output bytes.Buffer
+	if err := parsed.ExecuteTemplate(&output, path.Base(templatePath), data); err != nil {
+		return nil, fmt.Errorf("renderizar template %s: %w", templatePath, err)
+	}
+	return output.Bytes(), nil
 }

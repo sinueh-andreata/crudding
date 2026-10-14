@@ -4,7 +4,8 @@ import (
 	"io/fs"
 	"os"
 
-	"crudding/internal/types"
+	"crudding/internal/manifest"
+	"crudding/internal/project"
 )
 
 // Plan descreve tudo o que um gerador de linguagem quer produzir. Os geradores
@@ -19,8 +20,9 @@ type Plan struct {
 }
 
 // Scaffold cria o diretório do projeto (nunca sobrescreve um existente),
-// executa o Plan e remove tudo o que foi gerado se algum passo falhar.
-func Scaffold(destination string, templates fs.FS, plan Plan) (err error) {
+// grava o project.crud, executa o Plan e remove tudo o que foi gerado se algum
+// passo falhar.
+func Scaffold(destination string, config project.Config, templates fs.FS, plan Plan) (err error) {
 	root, err := CreateProjectDirectory(destination)
 	if err != nil {
 		return err
@@ -36,6 +38,9 @@ func Scaffold(destination string, templates fs.FS, plan Plan) (err error) {
 			return err
 		}
 	}
+	if err = manifest.Write(root, manifest.New(config)); err != nil {
+		return err
+	}
 	return WriteFiles(root, templates, plan.Data, plan.Files)
 }
 
@@ -48,11 +53,10 @@ type BaseData struct {
 	Architecture string
 }
 
-func NewBaseData(config types.ProjectConfig) BaseData {
+func NewBaseData(config project.Config) BaseData {
 	return BaseData{
 		ProjectName:  config.ProjectName,
 		Framework:    config.Framework,
 		Architecture: config.Architecture,
 	}
 }
-

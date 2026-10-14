@@ -6,25 +6,28 @@ import (
 	"slices"
 
 	"crudding/internal/generator/common"
-	"crudding/internal/generator/golang"
-	"crudding/internal/generator/node"
-	"crudding/internal/generator/python"
-	"crudding/internal/types"
+	"crudding/internal/generator/langs/golang"
+	"crudding/internal/generator/langs/node"
+	"crudding/internal/generator/langs/python"
+	"crudding/internal/project"
 )
 
 // Language descreve uma linguagem suportada. É a fonte única das opções
 // exibidas no menu, da validação e da matriz de testes.
 type Language struct {
-	Name          string   // valor de types.ProjectConfig.Language
+	Name          string   // valor de project.Config.Language
 	Label         string   // nome exibido em mensagens de erro
 	Runtimes      []string // vazio quando a linguagem não pergunta runtime
 	Frameworks    []string
 	Architectures []string
-	plan          func(destination string, config types.ProjectConfig) (common.Plan, error)
+	plan          func(destination string, config project.Config) (common.Plan, error)
+	// endpoint monta o Patch de "crudding add endpoint"; nil enquanto a
+	// linguagem não suporta o comando.
+	endpoint func(root string, config project.Config, name string) (common.Patch, error)
 }
 
 var languages = []Language{
-	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, plan: python.Plan},
+	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, plan: python.Plan, endpoint: python.Endpoint},
 	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, plan: golang.Plan},
 	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, plan: node.Plan},
 }
@@ -42,7 +45,7 @@ func Lookup(name string) (Language, bool) {
 	return languages[index], true
 }
 
-func (l Language) validate(config types.ProjectConfig) error {
+func (l Language) validate(config project.Config) error {
 	if len(l.Runtimes) > 0 && !slices.Contains(l.Runtimes, config.Runtime) {
 		return fmt.Errorf("runtime %s não suportado: %s", l.Label, config.Runtime)
 	}
@@ -55,7 +58,7 @@ func (l Language) validate(config types.ProjectConfig) error {
 	return nil
 }
 
-func Generate(destination string, config types.ProjectConfig, templates fs.FS) error {
+func Generate(destination string, config project.Config, templates fs.FS) error {
 	language, ok := Lookup(config.Language)
 	if !ok {
 		return fmt.Errorf("linguagem não suportada: %s", config.Language)
@@ -67,5 +70,5 @@ func Generate(destination string, config types.ProjectConfig, templates fs.FS) e
 	if err != nil {
 		return err
 	}
-	return common.Scaffold(destination, templates, plan)
+	return common.Scaffold(destination, config, templates, plan)
 }

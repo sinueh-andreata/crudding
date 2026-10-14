@@ -1,4 +1,4 @@
-package generator
+package test
 
 import (
 	"encoding/json"
@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"crudding/internal/types"
+	"crudding/internal/generator"
+	"crudding/internal/manifest"
+	"crudding/internal/project"
 )
 
 // templates aponta para a raiz do repositório, onde fica a pasta templates/.
@@ -60,9 +62,9 @@ var codeChecks = map[string]map[string][2]string{
 }
 
 // allConfigs monta a matriz completa a partir do registry de linguagens.
-func allConfigs() []types.ProjectConfig {
-	var configs []types.ProjectConfig
-	for _, language := range Languages() {
+func allConfigs() []project.Config {
+	var configs []project.Config
+	for _, language := range generator.Languages() {
 		runtimes := language.Runtimes
 		if len(runtimes) == 0 {
 			runtimes = []string{""}
@@ -70,7 +72,7 @@ func allConfigs() []types.ProjectConfig {
 		for _, framework := range language.Frameworks {
 			for _, runtime := range runtimes {
 				for _, architecture := range language.Architectures {
-					configs = append(configs, types.ProjectConfig{ProjectName: "Sample", Language: language.Name, Runtime: runtime, Framework: framework, Architecture: architecture})
+					configs = append(configs, project.Config{ProjectName: "Sample", Language: language.Name, Runtime: runtime, Framework: framework, Architecture: architecture})
 				}
 			}
 		}
@@ -108,7 +110,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 	for _, config := range allConfigs() {
 		t.Run(config.Language+"/"+config.Framework+"/"+config.Runtime+"/"+config.Architecture, func(t *testing.T) {
 			destination := filepath.Join(t.TempDir(), "Sample")
-			if err := Generate(destination, config, templates); err != nil {
+			if err := generator.Generate(destination, config, templates); err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
 
@@ -127,6 +129,9 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 					withExt[index] = file + "." + config.Runtime
 				}
 				files = withExt
+			}
+			if _, m, err := manifest.Find(destination); err != nil || m.Config() != config {
+				t.Errorf("%s = %+v, %v; want %+v", manifest.FileName, m, err, config)
 			}
 			assertFilesExist(t, destination, files...)
 			assertFilesAbsent(t, destination, forbiddenFiles[config.Language][config.Architecture]...)
@@ -172,8 +177,8 @@ func TestGenerateRefusesExistingDirectory(t *testing.T) {
 	if err := os.WriteFile(marker, []byte("keep"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	config := types.ProjectConfig{ProjectName: "existing", Language: "go", Framework: "raw", Architecture: "flat"}
-	if err := Generate(destination, config, os.DirFS(filepath.Join("..", ".."))); err == nil {
+	config := project.Config{ProjectName: "existing", Language: "go", Framework: "raw", Architecture: "flat"}
+	if err := generator.Generate(destination, config, os.DirFS(filepath.Join("..", ".."))); err == nil {
 		t.Fatal("Generate() should reject an existing directory")
 	}
 	content, err := os.ReadFile(marker)
@@ -224,8 +229,8 @@ assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["status"] == 409`}
 	for _, testCase := range cases {
 		t.Run(testCase.architecture, func(t *testing.T) {
 			destination := filepath.Join(t.TempDir(), "Sample")
-			config := types.ProjectConfig{ProjectName: "Sample", Language: "python", Framework: "raw", Architecture: testCase.architecture}
-			if err := Generate(destination, config, templates); err != nil {
+			config := project.Config{ProjectName: "Sample", Language: "python", Framework: "raw", Architecture: testCase.architecture}
+			if err := generator.Generate(destination, config, templates); err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
 			command := exec.Command(python, "-c", testCase.script)
@@ -247,8 +252,8 @@ func TestPythonFrameworkEntrypointsCompile(t *testing.T) {
 	for _, framework := range []string{"raw", "fastapi", "django", "flask"} {
 		t.Run(framework, func(t *testing.T) {
 			destination := filepath.Join(t.TempDir(), "Sample")
-			config := types.ProjectConfig{ProjectName: "Sample", Language: "python", Framework: framework, Architecture: "flat"}
-			if err := Generate(destination, config, templates); err != nil {
+			config := project.Config{ProjectName: "Sample", Language: "python", Framework: framework, Architecture: "flat"}
+			if err := generator.Generate(destination, config, templates); err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
 			command := exec.Command(python, "-m", "compileall", "-q", destination)
@@ -261,7 +266,7 @@ func TestPythonFrameworkEntrypointsCompile(t *testing.T) {
 
 func TestGenerateRejectsUnsupportedOptions(t *testing.T) {
 	templates := os.DirFS(filepath.Join("..", ".."))
-	for _, config := range []types.ProjectConfig{
+	for _, config := range []project.Config{
 		{Language: "go", Framework: "express", Architecture: "flat"},
 		{Language: "go", Framework: "raw", Architecture: "monorepo"},
 		{Language: "node", Runtime: "ruby", Framework: "raw", Architecture: "layered"},
@@ -269,7 +274,7 @@ func TestGenerateRejectsUnsupportedOptions(t *testing.T) {
 		{Language: "python", Framework: "raw", Architecture: "monorepo"},
 		{Language: "python", Framework: "raw", Architecture: "unknown"},
 	} {
-		if err := Generate(filepath.Join(t.TempDir(), "project"), config, templates); err == nil || strings.Contains(err.Error(), "template") {
+		if err := generator.Generate(filepath.Join(t.TempDir(), "project"), config, templates); err == nil || strings.Contains(err.Error(), "template") {
 			t.Errorf("Generate(%+v) should reject unsupported options before rendering, got %v", config, err)
 		}
 	}
@@ -279,13 +284,13 @@ func TestGenerateGoVet(t *testing.T) {
 	templates := os.DirFS(filepath.Join("..", ".."))
 	for _, arch := range []string{"flat", "layered", "modular"} {
 		dest := filepath.Join(t.TempDir(), arch)
-		cfg := types.ProjectConfig{
+		cfg := project.Config{
 			ProjectName:  arch,
 			Language:     "go",
 			Framework:    "raw",
 			Architecture: arch,
 		}
-		if err := Generate(dest, cfg, templates); err != nil {
+		if err := generator.Generate(dest, cfg, templates); err != nil {
 			t.Fatalf("Generate() error = %v for %s", err, arch)
 		}
 	}
@@ -300,8 +305,8 @@ func TestGeneratedGoRawScaffoldsCompile(t *testing.T) {
 	for _, architecture := range []string{"flat", "layered", "modular", "hexagonal", "clean_arch"} {
 		t.Run(architecture, func(t *testing.T) {
 			destination := filepath.Join(t.TempDir(), "Sample")
-			config := types.ProjectConfig{ProjectName: "Sample", Language: "go", Framework: "raw", Architecture: architecture}
-			if err := Generate(destination, config, templates); err != nil {
+			config := project.Config{ProjectName: "Sample", Language: "go", Framework: "raw", Architecture: architecture}
+			if err := generator.Generate(destination, config, templates); err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
 			if smokeTest, ok := goAPISmokeTests[architecture]; ok {

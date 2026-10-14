@@ -6,7 +6,6 @@ import (
 
 	"crudding/internal/generator/common"
 	"crudding/internal/project"
-	"crudding/internal/types"
 )
 
 var Frameworks = []string{"raw", "gin", "fiber", "chi"}
@@ -107,7 +106,7 @@ var architectures = map[string]architecture{
 
 // Plan monta o projeto Go. Framework e arquitetura já foram validados pelo
 // registry em internal/generator.
-func Plan(_ string, config types.ProjectConfig) (common.Plan, error) {
+func Plan(_ string, config project.Config) (common.Plan, error) {
 	arch, ok := architectures[config.Architecture]
 	if !ok {
 		return common.Plan{}, fmt.Errorf("arquitetura Go não suportada: %s", config.Architecture)
