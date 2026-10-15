@@ -28,7 +28,7 @@ type Language struct {
 
 var languages = []Language{
 	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, plan: python.Plan, endpoint: python.Endpoint},
-	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, plan: golang.Plan},
+	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, plan: golang.Plan, endpoint: golang.Endpoint},
 	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, plan: node.Plan},
 }
 

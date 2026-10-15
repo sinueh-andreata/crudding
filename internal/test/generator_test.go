@@ -20,11 +20,11 @@ var templates = os.DirFS(filepath.Join("..", ".."))
 // não têm extensão: o runtime (.js/.ts) é acrescentado na checagem.
 var requiredFiles = map[string]map[string][]string{
 	"go": {
-		"flat":       {"main.go", "tasks.go", "tasks_test.go"},
-		"layered":    {"cmd/api/main.go", "internal/router/router.go", "internal/handlers/handler.go", "internal/services/service.go", "internal/models/item.go"},
-		"modular":    {"cmd/api/main.go", "cmd/worker/main.go", "internal/router/router.go", "internal/order/order.go", "internal/order/handler.go", "internal/order/service.go", "internal/product/product.go", "internal/product/service.go", "internal/platform/database/database.go"},
-		"hexagonal":  {"cmd/rest/main.go", "cmd/grpc/main.go", "internal/domain/product.go", "internal/application/service.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/http/handler.go", "internal/adapters/grpc/server.go", "internal/adapters/postgres/repository.go"},
-		"clean_arch": {"cmd/api/main.go", "internal/domain/order.go", "internal/domain/errors.go", "internal/application/create_order.go", "internal/application/dto.go", "internal/ports/repository.go", "internal/infrastructure/persistence/repository.go", "internal/infrastructure/http/handler.go", "internal/infrastructure/messaging/producer.go", "pkg/validator/validator.go", "migrations/000001_init.sql"},
+		"flat":       {"main.go", "routes.go", "user_model.go", "user_types.go", "user_service.go", "user_handler.go"},
+		"layered":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/service/user.go", "internal/types/user.go", "internal/models/user.go"},
+		"modular":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/user/handler.go", "internal/user/service.go", "internal/user/types.go", "internal/user/model.go"},
+		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/postgres/user.go", "internal/domain/user.go", "internal/domain/types.go"},
+		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/infrastructure/persistence/user.go", "internal/domain/user.go", "internal/domain/types.go"},
 	},
 	"node": {
 		"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},
@@ -45,12 +45,16 @@ var requiredFiles = map[string]map[string][]string{
 // Arquivos que NÃO devem existir (camadas removidas propositalmente).
 var forbiddenFiles = map[string]map[string][]string{
 	"go": {
-		"layered": {"internal/repositories"},
-		"modular": {"internal/order/repository.go", "internal/user/repository.go"},
+		"flat":       {"user_repository.go", "tasks.go", "tasks_test.go"},
+		"layered":    {"routes", "internal/repository", "internal/router"},
+		"modular":    {"routes", "internal/user/repository.go", "internal/router"},
+		"hexagonal":  {"routes", "cmd/grpc", "internal/adapters/grpc"},
+		"clean_arch": {"routes", "pkg/validator", "migrations"},
 	},
 	"python": {
-		"layered":    {"src/app/router", "src/app/controllers/api.py"},
-		"modular":    {"src/app/shared/api.py"},
+		"flat":       {"src/sample/repository.py", "src/sample/resource_repository.py"},
+		"layered":    {"src/app/repositories", "src/app/repository", "src/app/services/resource_repository.py", "src/app/router", "src/app/controllers/api.py"},
+		"modular":    {"src/app/resource/repository.py", "src/app/shared/api.py"},
 		"hexagonal":  {"src/app/routers/api.py"},
 		"clean_arch": {"src/app/frameworks_and_drivers/web/api.py"},
 	},
@@ -289,7 +293,7 @@ func TestGenerateRejectsUnsupportedOptions(t *testing.T) {
 
 func TestGenerateGoVet(t *testing.T) {
 	templates := os.DirFS(filepath.Join("..", ".."))
-	for _, arch := range []string{"flat", "layered", "modular"} {
+	for _, arch := range []string{"flat", "layered", "modular", "hexagonal", "clean_arch"} {
 		dest := filepath.Join(t.TempDir(), arch)
 		cfg := project.Config{
 			ProjectName:  arch,
@@ -331,26 +335,54 @@ func TestGeneratedGoRawScaffoldsCompile(t *testing.T) {
 }
 
 var goAPISmokeTests = map[string]string{
+	"flat": `package main
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+func TestDemoAPI(t *testing.T) {
+	svc := NewUserService()
+	handler := NewUserHandler(svc)
+	router := SetupRouter(handler)
+	request := func(method, path, body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		return response
+	}
+	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	list := request(http.MethodGet, "/api/v1/users", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/users/1", "")
+	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
+}`,
 	"layered": `package main
 import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"example.com/sample/internal/router"
+	"example.com/sample/internal/handlers"
+	"example.com/sample/internal/routes"
+	"example.com/sample/internal/service"
 )
 func TestDemoAPI(t *testing.T) {
-	handler := router.Setup()
+	svc := service.NewUserService()
+	handler := handlers.NewUserHandler(svc)
+	router := routes.SetupRouter(handler)
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/orders", ` + "`" + `{"userId":1,"items":[{"product":"book","quantity":2,"unitPrice":3.25}]}` + "`" + `)
-	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"total":6.5` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	paid := request(http.MethodPost, "/orders/1/pay", "")
-	if paid.Code != http.StatusOK || !strings.Contains(paid.Body.String(), ` + "`" + `"status":"paid"` + "`" + `) { t.Fatalf("pay = %d %s", paid.Code, paid.Body.String()) }
-	if cancelled := request(http.MethodPost, "/orders/1/cancel", ""); cancelled.Code != http.StatusConflict { t.Fatalf("cancel status = %d", cancelled.Code) }
+	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	list := request(http.MethodGet, "/api/v1/users", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/users/1", "")
+	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"modular": `package main
 import (
@@ -358,19 +390,24 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"example.com/sample/internal/router"
+	"example.com/sample/internal/routes"
+	"example.com/sample/internal/user"
 )
 func TestDemoAPI(t *testing.T) {
-	handler := router.Setup()
+	svc := user.NewService()
+	handler := user.NewHandler(svc)
+	router := routes.SetupRouter(handler)
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/orders", ` + "`" + `{"items":[{"productId":1,"quantity":2}]}` + "`" + `)
-	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"total":900` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	product := request(http.MethodGet, "/products/1", "")
-	if !strings.Contains(product.Body.String(), ` + "`" + `"stock":8` + "`" + `) { t.Fatalf("stock = %s", product.Body.String()) }
+	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	list := request(http.MethodGet, "/api/v1/users", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/users/1", "")
+	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"hexagonal": `package main
 import (
@@ -378,40 +415,54 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	httpapi "example.com/sample/internal/adapters/http"
+	"example.com/sample/internal/adapters/postgres"
+	"example.com/sample/internal/application"
+	"example.com/sample/internal/handlers"
+	"example.com/sample/internal/routes"
 )
 func TestDemoAPI(t *testing.T) {
-	handler := httpapi.NewAPI()
+	repo := postgres.NewUserRepository()
+	svc := application.NewUserService(repo)
+	handler := handlers.NewUserHandler(svc)
+	router := routes.SetupRouter(handler)
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	discount := request(http.MethodPost, "/products/prod-1/discount", ` + "`" + `{"percent":10}` + "`" + `)
-	if discount.Code != http.StatusOK || !strings.Contains(discount.Body.String(), ` + "`" + `"price":288` + "`" + `) { t.Fatalf("discount = %d %s", discount.Code, discount.Body.String()) }
-	if invalid := request(http.MethodPost, "/products/prod-1/discount", ` + "`" + `{"percent":100}` + "`" + `); invalid.Code != http.StatusUnprocessableEntity { t.Fatalf("invalid discount status = %d", invalid.Code) }
+	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	list := request(http.MethodGet, "/api/v1/users", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/users/1", "")
+	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 	"clean_arch": `package main
 import (
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"testing"
-	httpapi "example.com/sample/internal/infrastructure/http"
+	"example.com/sample/internal/application"
+	"example.com/sample/internal/handlers"
+	"example.com/sample/internal/infrastructure/persistence"
+	"example.com/sample/internal/routes"
 )
 func TestDemoAPI(t *testing.T) {
-	handler := httpapi.NewAPI()
+	repo := persistence.NewUserRepository()
+	svc := application.NewUserService(repo)
+	handler := handlers.NewUserHandler(svc)
+	router := routes.SetupRouter(handler)
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
+		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
 		return response
 	}
-	created := request(http.MethodPost, "/orders", ` + "`" + `{"customerId":"customer-1","items":[{"sku":"SKU-1","quantity":2,"unitPrice":12.5}]}` + "`" + `)
-	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"formatted":"R$ 25,00"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
-	orderID := regexp.MustCompile("\\\"id\\\":\\\"([^\\\"]+)\\\"").FindStringSubmatch(created.Body.String())[1]
-	paid := request(http.MethodPost, "/orders/"+orderID+"/pay", "")
-	if paid.Code != http.StatusOK || !strings.Contains(paid.Body.String(), ` + "`" + `"status":"paid"` + "`" + `) { t.Fatalf("pay = %d %s", paid.Code, paid.Body.String()) }
-	if again := request(http.MethodPost, "/orders/"+orderID+"/pay", ""); again.Code != http.StatusConflict { t.Fatalf("second payment status = %d", again.Code) }
+	created := request(http.MethodPost, "/api/v1/users", ` + "`" + `{"name":"Alice","email":"alice@example.com","password":"secret"}` + "`" + `)
+	if created.Code != http.StatusCreated || !strings.Contains(created.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("create = %d %s", created.Code, created.Body.String()) }
+	list := request(http.MethodGet, "/api/v1/users", "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), ` + "`" + `"alice@example.com"` + "`" + `) { t.Fatalf("list = %d %s", list.Code, list.Body.String()) }
+	get := request(http.MethodGet, "/api/v1/users/1", "")
+	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 }

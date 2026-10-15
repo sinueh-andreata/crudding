@@ -80,9 +80,71 @@ func TestAddEndpointPython(t *testing.T) {
 	}
 }
 
+var goRouterFiles = map[string]string{
+	"flat":       "routes.go",
+	"layered":    "internal/routes/routes.go",
+	"modular":    "internal/routes/routes.go",
+	"hexagonal":  "internal/routes/routes.go",
+	"clean_arch": "internal/routes/routes.go",
+}
+
+func TestAddEndpointGo(t *testing.T) {
+	goCommand, goErr := exec.LookPath("go")
+	language, _ := generator.Lookup("go")
+	for _, architecture := range language.Architectures {
+		t.Run(architecture, func(t *testing.T) {
+			routerFile, ok := goRouterFiles[architecture]
+			if !ok {
+				t.Fatalf("sem routerFile cadastrado para %s", architecture)
+			}
+			root, m := generateProject(t, project.Config{ProjectName: "Sample", Language: "go", Framework: "raw", Architecture: architecture})
+
+			for _, name := range []string{"customer", "invoice"} {
+				result, err := generator.AddEndpoint(root, m, name, templates)
+				if err != nil {
+					t.Fatalf("AddEndpoint(%s) error = %v", name, err)
+				}
+				if len(result.Created) == 0 || !slices.Equal(result.Modified, []string{routerFile}) {
+					t.Fatalf("AddEndpoint(%s) = %+v", name, result)
+				}
+				assertFilesExist(t, root, result.Created...)
+			}
+			assertFileContains(t, root, routerFile, `customerHandler.Create`)
+			assertFileContains(t, root, routerFile, "// crudding:routes")
+
+			if architecture == "flat" {
+				assertFilesAbsent(t, root, "customer_repository.go", "invoice_repository.go")
+			} else if architecture == "layered" {
+				assertFilesAbsent(t, root, "internal/repository/customer.go", "internal/repository/invoice.go")
+			} else if architecture == "modular" {
+				assertFilesAbsent(t, root, "internal/customer/repository.go", "internal/invoice/repository.go")
+			}
+
+			before, err := os.ReadFile(filepath.Join(root, routerFile))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := generator.AddEndpoint(root, m, "invoice", templates); err == nil || !strings.Contains(err.Error(), "já existe") {
+				t.Errorf("AddEndpoint repetido: err = %v", err)
+			}
+			if after, _ := os.ReadFile(filepath.Join(root, routerFile)); string(after) != string(before) {
+				t.Error("AddEndpoint repetido alterou o arquivo de rotas")
+			}
+
+			if goErr != nil {
+				t.Skip("go is not installed")
+			}
+			command := exec.Command(goCommand, "test", "./...")
+			command.Dir = root
+			if output, err := command.CombinedOutput(); err != nil {
+				t.Fatalf("projeto Go após add endpoint não compila: %v\n%s", err, output)
+			}
+		})
+	}
+}
+
 func TestAddEndpointUnsupportedLanguages(t *testing.T) {
 	for _, config := range []project.Config{
-		{ProjectName: "Sample", Language: "go", Framework: "gin", Architecture: "layered"},
 		{ProjectName: "Sample", Language: "node", Runtime: "ts", Framework: "express", Architecture: "modular"},
 	} {
 		root, m := generateProject(t, config)

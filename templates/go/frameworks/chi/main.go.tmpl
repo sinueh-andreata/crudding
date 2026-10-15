@@ -4,14 +4,51 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-{{if .HandlerImport}}	{{.HandlerImport}}
-{{end}})
+{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/routes"
+	"{{.GoModule}}/internal/user"
+{{else if eq .Architecture "layered"}}	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/routes"
+	"{{.GoModule}}/internal/service"
+{{else if eq .Architecture "hexagonal"}}	"{{.GoModule}}/internal/adapters/postgres"
+	"{{.GoModule}}/internal/application"
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/routes"
+{{else if eq .Architecture "clean_arch"}}	"{{.GoModule}}/internal/application"
+	"{{.GoModule}}/internal/handlers"
+	"{{.GoModule}}/internal/infrastructure/persistence"
+	"{{.GoModule}}/internal/routes"
+{{end}}	// crudding:imports
+)
 
 func main() {
-	handler := {{.HandlerExpr}}
-	router := chi.NewRouter()
-	router.Mount("/", handler)
+{{if eq .Architecture "modular"}}	userSvc := user.NewService()
+	userHandler := user.NewHandler(userSvc)
+	// crudding:di
+
+	router := routes.SetupRouter(userHandler)
+{{else if eq .Architecture "layered"}}	userSvc := service.NewUserService()
+	userHandler := handlers.NewUserHandler(userSvc)
+	// crudding:di
+
+	router := routes.SetupRouter(userHandler)
+{{else if eq .Architecture "hexagonal"}}	userRepo := postgres.NewUserRepository()
+	userSvc := application.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userSvc)
+	// crudding:di
+
+	router := routes.SetupRouter(userHandler)
+{{else if eq .Architecture "clean_arch"}}	userRepo := persistence.NewUserRepository()
+	userSvc := application.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userSvc)
+	// crudding:di
+
+	router := routes.SetupRouter(userHandler)
+{{else if eq .Architecture "flat"}}	userSvc := NewUserService()
+	userHandler := NewUserHandler(userSvc)
+	// crudding:di
+
+	router := SetupRouter(userHandler)
+{{end}}
 	log.Println("Servidor HTTP rodando em http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }

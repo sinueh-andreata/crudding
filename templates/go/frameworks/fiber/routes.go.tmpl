@@ -1,0 +1,22 @@
+package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
+
+import (
+{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/user"
+{{else if not (eq .Architecture "flat")}}	"{{.GoModule}}/internal/handlers"
+{{end}}	// crudding:imports
+	"github.com/gofiber/fiber/v2"
+)
+
+{{if eq .Architecture "modular"}}func SetupRouter(userHandler *user.Handler) *fiber.App {
+{{else}}func SetupRouter(userHandler *{{if not (eq .Architecture "flat")}}handlers.{{end}}UserHandler) *fiber.App {
+{{end}}	app := fiber.New()
+
+	api := app.Group("/api/v1")
+	api.Post("/users", userHandler.Create)
+	api.Get("/users", userHandler.List)
+	api.Get("/users/:id", userHandler.GetByID)
+	api.Delete("/users/:id", userHandler.Delete)
+	// crudding:routes
+
+	return app
+}

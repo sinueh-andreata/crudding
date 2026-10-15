@@ -15,11 +15,11 @@ Guia de contexto, arquitetura e instruções para agentes de IA atuando no repos
   - `node`: runtimes `js` e `ts`; frameworks `raw`, `express`, `nest`, `fastify`.
 - **Arquiteturas (Padrões de Pastas)**:
   - **Para Golang**:
-    1. `flat`: tudo no pacote `main` (`parse.go`, `parse_test.go`, `report.go`, `main.go`, `README.md`).
-    2. `layered`: separação em camadas sob `internal/` (`router`, `handlers`, `services`, `models`) e `cmd/api/main.go`.
-    3. `modular`: *package-by-feature* com módulos (`order`, `user`), camada centralizadora `internal/router`, plataforma compartilhada (`platform/database`, `platform/auth`) e múltiplos executáveis (`cmd/api`, `cmd/worker`).
-    4. `hexagonal`: *Ports & Adapters* com `internal/domain`, `internal/ports`, `internal/adapters` (`http`, `grpc`, `postgres`) e múltiplos entrypoints (`cmd/rest`, `cmd/grpc`).
-    5. `clean arch`: Clean Architecture de Uncle Bob com `domain`, `application`, `ports`, `infrastructure` (`persistence`, `http`, `messaging`), utilitários em `pkg/validator` e `migrations/`.
+    1. `flat`: tudo na raiz no pacote `main` (`user_model.go`, `user_types.go`, `user_service.go`, `user_handler.go`, `routes.go`, `main.go`, `README.md`).
+    2. `layered`: separação clássica em camadas sob `internal/` (`models`, `types`, `service`, `handlers`, `routes`), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
+    3. `modular`: *package-by-feature* com módulos (`internal/<feature>/` com `model.go`, `types.go`, `service.go`, `handler.go`), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
+    4. `hexagonal`: *Ports & Adapters* com `internal/domain` (entidades e tipos), `internal/ports` (interfaces repository/service), `internal/application` (serviços de aplicação), `internal/adapters/postgres` (adaptador secundário), `internal/handlers` (adaptador primário HTTP), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
+    5. `clean arch`: Clean Architecture concêntrica com `internal/domain` (entidades e tipos), `internal/ports` (fronteiras repository/service), `internal/application` (casos de uso), `internal/infrastructure/persistence` (implementação de persistência), `internal/handlers` (controladores HTTP), roteamento em `internal/routes/routes.go` e injeção em `cmd/api/main.go`.
    - **Para Python**:
       - `flat`, `layered`, `modular`, `hexagonal` e `clean_arch`, com estruturas próprias sob `src/`.
    - **Para Node**:
@@ -51,7 +51,9 @@ crudding/
 │   │   │   ├── scaffold.go      # Criação do projeto (Plan) e gravação do project.crud
 │   │   │   └── patch.go         # Alterações em projeto existente (Patch): arquivos novos, pacotes Python e inserções em markers, com rollback
 │   │   ├── langs/
-│   │   │   ├── golang/generate.go # Gerador específico para projetos Go
+│   │   │   ├── golang/
+│   │   │   │   ├── generate.go  # Gerador específico para projetos Go
+│   │   │   │   └── endpoint.go  # Layouts de "add endpoint" por arquitetura Go
 │   │   │   ├── node/generate.go   # Gerador específico para projetos Node (JS/TS)
 │   │   │   └── python/
 │   │   │       ├── generate.go   # Gerador específico para projetos Python
@@ -69,8 +71,8 @@ crudding/
 │       └── menu.go              # Menu Bubble Tea para seleção interativa
 ├── templates/                   # Arquivos de template (.tmpl) para cada stack
 │   ├── go/
-│   │   ├── base/                # go.mod, go.sum, .gitignore
-│   │   └── architectures/       # flat, layered, modular, hexagonal, clean_arch
+│   │   ├── base/                # common (.gitignore, go.mod, go.sum) e arquiteturas (flat, layered, modular, hexagonal, clean_arch)
+│   │   └── frameworks/          # entrypoints por framework (chi, fiber, gin, raw)
 │   ├── node/
 │   └── python/
 ├── assets.go                    # Declaração do embed.FS para a pasta templates/
@@ -103,7 +105,7 @@ crudding/
 ### `crudding add endpoint`
 
 1. `manifest.Find` procura o `project.crud` a partir do diretório atual, subindo pelos pais.
-2. `generator.CheckEndpointSupport` valida o manifesto contra o registry e confirma que a linguagem tem `endpoint` (hoje só Python; Go e Node devolvem "ainda não suportado").
+2. `generator.CheckEndpointSupport` valida o manifesto contra o registry e confirma que a linguagem tem `endpoint` (suportado em Python e Go; Node devolve "ainda não suportado").
 3. `project.ReadEndpointName` lê o nome (snake_case).
 4. A função `endpoint` da linguagem monta um `common.Patch`: os templates necessários, os pacotes e as inserções nos markers `# crudding:imports` / `# crudding:routes` do módulo de API.
 5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, cada marker aparece uma única vez) e desfaz as alterações se a gravação falhar.

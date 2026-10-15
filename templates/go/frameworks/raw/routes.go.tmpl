@@ -1,0 +1,22 @@
+package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
+
+import (
+	"net/http"
+
+{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/user"
+{{else if not (eq .Architecture "flat")}}	"{{.GoModule}}/internal/handlers"
+{{end}}	// crudding:imports
+)
+
+{{if eq .Architecture "modular"}}func SetupRouter(userHandler *user.Handler) *http.ServeMux {
+{{else}}func SetupRouter(userHandler *{{if not (eq .Architecture "flat")}}handlers.{{end}}UserHandler) *http.ServeMux {
+{{end}}	mux := http.NewServeMux()
+
+	mux.HandleFunc("POST /api/v1/users", userHandler.Create)
+	mux.HandleFunc("GET /api/v1/users", userHandler.List)
+	mux.HandleFunc("GET /api/v1/users/{id}", userHandler.GetByID)
+	mux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.Delete)
+	// crudding:routes
+
+	return mux
+}

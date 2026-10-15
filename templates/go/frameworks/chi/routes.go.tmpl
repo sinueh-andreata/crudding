@@ -1,0 +1,23 @@
+package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
+
+import (
+{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/user"
+{{else if not (eq .Architecture "flat")}}	"{{.GoModule}}/internal/handlers"
+{{end}}	// crudding:imports
+	"github.com/go-chi/chi/v5"
+)
+
+{{if eq .Architecture "modular"}}func SetupRouter(userHandler *user.Handler) chi.Router {
+{{else}}func SetupRouter(userHandler *{{if not (eq .Architecture "flat")}}handlers.{{end}}UserHandler) chi.Router {
+{{end}}	r := chi.NewRouter()
+
+	r.Route("/api/v1/users", func(r chi.Router) {
+		r.Post("/", userHandler.Create)
+		r.Get("/", userHandler.List)
+		r.Get("/{id}", userHandler.GetByID)
+		r.Delete("/{id}", userHandler.Delete)
+		// crudding:routes
+	})
+
+	return r
+}

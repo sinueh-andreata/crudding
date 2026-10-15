@@ -1,0 +1,24 @@
+package {{if eq .Architecture "flat"}}main{{else}}routes{{end}}
+
+import (
+{{if eq .Architecture "modular"}}	"{{.GoModule}}/internal/user"
+{{else if not (eq .Architecture "flat")}}	"{{.GoModule}}/internal/handlers"
+{{end}}	// crudding:imports
+	"github.com/gin-gonic/gin"
+)
+
+{{if eq .Architecture "modular"}}func SetupRouter(userHandler *user.Handler) *gin.Engine {
+{{else}}func SetupRouter(userHandler *{{if not (eq .Architecture "flat")}}handlers.{{end}}UserHandler) *gin.Engine {
+{{end}}	r := gin.Default()
+
+	api := r.Group("/api/v1")
+	{
+		api.POST("/users", userHandler.Create)
+		api.GET("/users", userHandler.List)
+		api.GET("/users/:id", userHandler.GetByID)
+		api.DELETE("/users/:id", userHandler.Delete)
+		// crudding:routes
+	}
+
+	return r
+}
