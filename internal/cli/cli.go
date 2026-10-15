@@ -66,7 +66,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 
 	cmd, ok := findCommand(input)
 	if !ok {
-		fmt.Fprintf(stderr, "crudding: comando desconhecido: %s\n%s", input, Usage())
+		fmt.Fprintf(stderr, "unknown command use `crudding help` or `crudding --help` or `crudding -h` for usage\n")
 		return 2
 	}
 
