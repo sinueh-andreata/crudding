@@ -10,7 +10,7 @@ make install
 
 ## Run
 
-After the instalation you can use the command "crudding" to create a new project
+After the instalation you can use the command "crudding" to create a new project 
 
 ```sh
 crudding
