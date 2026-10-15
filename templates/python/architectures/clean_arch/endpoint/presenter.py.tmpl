@@ -1,7 +1,0 @@
-from dataclasses import asdict
-
-from {{.Package}}.domain.model.{{.Name}} import {{.Class}}
-
-
-def present_{{.Name}}(item: {{.Class}}) -> dict:
-    return asdict(item)

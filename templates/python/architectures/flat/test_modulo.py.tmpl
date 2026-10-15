@@ -1,6 +1,0 @@
-from src.{{.PackageName}}.modulo import dispatch
-
-
-def test_resource_routes_are_ready_for_implementation():
-    assert dispatch("GET", "/resource")["status"] == 501
-    assert dispatch("POST", "/resource", {"name": "example"})["status"] == 501

@@ -1,20 +1,9 @@
-import json
-
-from flask import Flask, Response, request
-
-from {{.APIModule}} import dispatch
+from flask import Flask
+# crudding:imports
 
 app = Flask(__name__)
 
-
-@app.route("/", defaults={"path": ""}, methods=["GET", "POST", "PATCH", "DELETE"])
-@app.route("/<path:path>", methods=["GET", "POST", "PATCH", "DELETE"])
-def handle(path):
-    result = dispatch(request.method, request.path, request.get_json(silent=True), request.args.to_dict())
-    if result.get("body") is None:
-        return Response(status=result["status"])
-    return Response(json.dumps(result["body"]), status=result["status"], mimetype="application/json")
-
+# crudding:routes
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

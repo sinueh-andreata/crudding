@@ -105,10 +105,10 @@ crudding/
 1. `manifest.Find` procura o `project.crud` a partir do diretório atual, subindo pelos pais.
 2. `generator.CheckEndpointSupport` valida o manifesto contra o registry e confirma que a linguagem tem `endpoint` (hoje só Python; Go e Node devolvem "ainda não suportado").
 3. `project.ReadEndpointName` lê o nome (snake_case).
-4. A função `endpoint` da linguagem monta um `common.Patch`: os templates de `templates/<lang>/endpoint/`, os pacotes e as inserções nos markers `# crudding:imports` / `# crudding:routes` do módulo de API.
+4. A função `endpoint` da linguagem monta um `common.Patch`: os templates necessários, os pacotes e as inserções nos markers `# crudding:imports` / `# crudding:routes` do módulo de API.
 5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, cada marker aparece uma única vez) e desfaz as alterações se a gravação falhar.
 
-**Para suportar uma nova linguagem**: implemente `endpoint` em `internal/generator/<lang>/endpoint.go`, registre-o em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates em `templates/<lang>/endpoint/`. Os markers não podem ser removidos dos templates existentes.
+**Para suportar uma nova linguagem**: implemente `endpoint` em `internal/generator/langs/<lang>/endpoint.go`, registre-o em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates correspondentes. Os markers não podem ser removidos dos templates existentes.
 
 ---
 

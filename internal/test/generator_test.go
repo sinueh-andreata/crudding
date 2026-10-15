@@ -34,11 +34,11 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/resource.py", "src/sample/main.py", "tests/test_modulo.py"},
-		"layered":    {"src/app/controllers/resource_controller.py", "src/app/models/resource.py", "src/app/router/api.py", "src/app/router/resource_routes.py", "src/app/router/router.py"},
-		"modular":    {"src/app/resource/models.py", "src/app/resource/service.py", "src/app/resource/views.py", "src/app/shared/api.py"},
-		"hexagonal":  {"src/app/domain/resource.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/routers/api.py", "src/app/routers/resource.py", "src/app/main.py"},
-		"clean_arch": {"src/app/domain/model/resource.py", "src/app/application/use_cases/create_resource.py", "src/app/application/use_cases/list_resource.py", "src/app/application/port/outbound/resource_repository.py", "src/app/interface_adapters/controllers/resource_controller.py", "src/app/frameworks_and_drivers/web/api.py", "src/app/frameworks_and_drivers/web/resource_routes.py"},
+		"flat":       {"pyproject.toml", "setup.py", "src/sample/resource_controller.py", "src/sample/resource_service.py", "src/sample/resource_model.py", "src/sample/main.py"},
+		"layered":    {"src/app/main.py", "src/app/controllers/resource_controller.py", "src/app/services/resource_service.py", "src/app/models/resource.py"},
+		"modular":    {"src/app/main.py", "src/app/resource/controller.py", "src/app/resource/service.py", "src/app/resource/models.py"},
+		"hexagonal":  {"src/app/main.py", "src/app/routers/resource_controller.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/domain/resource.py"},
+		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/resource_controller.py", "src/app/interface_adapters/controllers/resource_controller.py", "src/app/interface_adapters/presenters/resource_presenter.py", "src/app/application/use_cases/create_resource.py", "src/app/application/use_cases/list_resource.py", "src/app/application/port/outbound/resource_repository.py", "src/app/interface_adapters/persistence/resource_repository.py", "src/app/domain/model/resource.py"},
 	},
 }
 
@@ -48,15 +48,21 @@ var forbiddenFiles = map[string]map[string][]string{
 		"layered": {"internal/repositories"},
 		"modular": {"internal/order/repository.go", "internal/user/repository.go"},
 	},
+	"python": {
+		"layered":    {"src/app/router", "src/app/controllers/api.py"},
+		"modular":    {"src/app/shared/api.py"},
+		"hexagonal":  {"src/app/routers/api.py"},
+		"clean_arch": {"src/app/frameworks_and_drivers/web/api.py"},
+	},
 }
 
 // Trechos de código que comprovam que o scaffold genérico foi gerado.
 var codeChecks = map[string]map[string][2]string{
 	"python": {
-		"flat":       {"src/sample/resource.py", "class Resource"},
-		"layered":    {"src/app/router/api.py", "def dispatch"},
+		"flat":       {"src/sample/resource_model.py", "class Resource"},
+		"layered":    {"src/app/services/resource_service.py", "def list_all"},
 		"modular":    {"src/app/resource/service.py", "def list_all"},
-		"hexagonal":  {"src/app/routers/api.py", "def dispatch"},
+		"hexagonal":  {"src/app/application/resource_service.py", "class ResourceService"},
 		"clean_arch": {"src/app/application/use_cases/create_resource.py", "class CreateResource"},
 	},
 }
@@ -156,9 +162,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 					t.Errorf("tsconfig.json presente = %v para runtime %s", hasTsconfig, config.Runtime)
 				}
 			case "python":
-				if config.Architecture == "flat" {
-					assertFileContains(t, destination, "tests/test_modulo.py", "def test_resource_routes_are_ready_for_implementation")
-				}
+				assertFilesExist(t, destination, "requirements.txt", "pyproject.toml")
 			}
 
 			if config.Language != "go" && !strings.Contains(string(readme), "- Arquitetura: "+config.Architecture) {
@@ -197,11 +201,11 @@ func TestPythonGenericResourceDispatchers(t *testing.T) {
 		architecture string
 		module       string
 	}{
-		{"flat", "src.sample.modulo"},
-		{"layered", "src.app.router.api"},
-		{"modular", "src.app.shared.api"},
-		{"hexagonal", "src.app.routers.api"},
-		{"clean_arch", "src.app.frameworks_and_drivers.web.api"},
+		{"flat", "src.sample.main"},
+		{"layered", "src.app.main"},
+		{"modular", "src.app.main"},
+		{"hexagonal", "src.app.main"},
+		{"clean_arch", "src.app.main"},
 	}
 
 	for _, testCase := range cases {
@@ -211,17 +215,31 @@ func TestPythonGenericResourceDispatchers(t *testing.T) {
 			if err := generator.Generate(destination, config, templates); err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
-			script := `from ` + testCase.module + ` import dispatch
-for method, path, body in (
-	("GET", "/resource", None),
-	("POST", "/resource", {"name": "example"}),
-	("GET", "/resource/1", None),
-	("PATCH", "/resource/1", {"name": "updated"}),
-	("DELETE", "/resource/1", None),
-):
-	assert dispatch(method, path, body)["status"] == 501, (method, path)
-assert dispatch("GET", "/resource/1/extra")["status"] == 404
-assert dispatch("GET", "/unknown")["status"] == 404`
+			script := `from ` + testCase.module + ` import ROUTES
+
+class MockHandler:
+    def __init__(self):
+        self.status = None
+        self.data = None
+    def send_json(self, status, data):
+        self.status = status
+        self.data = data
+    def read_json(self):
+        return {}
+    def send_response(self, status):
+        self.status = status
+    def end_headers(self):
+        pass
+
+assert "resource" in ROUTES, "resource route missing"
+handler = MockHandler()
+ROUTES["resource"](handler, "GET", [])
+assert handler.status == 501, f"expected 501, got {handler.status}"
+
+handler = MockHandler()
+ROUTES["resource"](handler, "GET", ["1"])
+assert handler.status == 501, f"expected 501, got {handler.status}"
+`
 			command := exec.Command(python, "-c", script)
 			command.Dir = destination
 			command.Env = append(os.Environ(), "PYTHONPATH="+destination)

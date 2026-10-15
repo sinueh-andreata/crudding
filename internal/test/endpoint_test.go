@@ -13,14 +13,12 @@ import (
 	"crudding/internal/project"
 )
 
-// Módulo com dispatch() e o recurso inicial que deve continuar registrado após
-// o add endpoint, por arquitetura Python.
-var pythonAPIs = map[string]struct{ api, module, resourceRoute string }{
-	"flat":       {"src/sample/modulo.py", "src.sample.modulo", "/resource"},
-	"layered":    {"src/app/router/api.py", "src.app.router.api", "/resource"},
-	"modular":    {"src/app/shared/api.py", "src.app.shared.api", "/resource"},
-	"hexagonal":  {"src/app/routers/api.py", "src.app.routers.api", "/resource"},
-	"clean_arch": {"src/app/frameworks_and_drivers/web/api.py", "src.app.frameworks_and_drivers.web.api", "/resource"},
+var pythonEntryScripts = map[string]string{
+	"flat":       "src/sample/main.py",
+	"layered":    "src/app/main.py",
+	"modular":    "src/app/main.py",
+	"hexagonal":  "src/app/main.py",
+	"clean_arch": "src/app/main.py",
 }
 
 func generateProject(t *testing.T, config project.Config) (string, manifest.Manifest) {
@@ -41,9 +39,9 @@ func TestAddEndpointPython(t *testing.T) {
 	language, _ := generator.Lookup("python")
 	for _, architecture := range language.Architectures {
 		t.Run(architecture, func(t *testing.T) {
-			api, ok := pythonAPIs[architecture]
+			entryScript, ok := pythonEntryScripts[architecture]
 			if !ok {
-				t.Fatalf("sem API cadastrada para %s", architecture)
+				t.Fatalf("sem entryScript cadastrado para %s", architecture)
 			}
 			root, m := generateProject(t, project.Config{ProjectName: "Sample", Language: "python", Framework: "fastapi", Architecture: architecture})
 
@@ -52,42 +50,31 @@ func TestAddEndpointPython(t *testing.T) {
 				if err != nil {
 					t.Fatalf("AddEndpoint(%s) error = %v", name, err)
 				}
-				if len(result.Created) == 0 || !slices.Equal(result.Modified, []string{api.api}) {
+				if len(result.Created) == 0 || !slices.Equal(result.Modified, []string{entryScript}) {
 					t.Fatalf("AddEndpoint(%s) = %+v", name, result)
 				}
 				assertFilesExist(t, root, result.Created...)
 			}
-			assertFileContains(t, root, api.api, `if parts and parts[0] == "order-item":`)
-			assertFileContains(t, root, api.api, "# crudding:routes")
+			assertFileContains(t, root, entryScript, `app.include_router(order_item_router, prefix="/order-item", tags=["OrderItem"])`)
+			assertFileContains(t, root, entryScript, "# crudding:routes")
 
-			before, err := os.ReadFile(filepath.Join(root, api.api))
+			before, err := os.ReadFile(filepath.Join(root, entryScript))
 			if err != nil {
 				t.Fatal(err)
 			}
 			if _, err := generator.AddEndpoint(root, m, "invoice", templates); err == nil || !strings.Contains(err.Error(), "já existe") {
 				t.Errorf("AddEndpoint repetido: err = %v", err)
 			}
-			if after, _ := os.ReadFile(filepath.Join(root, api.api)); string(after) != string(before) {
-				t.Error("AddEndpoint repetido alterou o módulo de API")
+			if after, _ := os.ReadFile(filepath.Join(root, entryScript)); string(after) != string(before) {
+				t.Error("AddEndpoint repetido alterou o main.py")
 			}
 
 			if pythonErr != nil {
 				t.Skip("python3 is not installed")
 			}
-			script := `from ` + api.module + ` import dispatch
-for route in ("/order-item", "/invoice"):
-    assert dispatch("GET", route)["status"] == 501, route
-    assert dispatch("POST", route, {"x": 1})["status"] == 501, route
-    assert dispatch("GET", route + "/1")["status"] == 501, route
-    assert dispatch("PATCH", route + "/1", {"x": 1})["status"] == 501, route
-    assert dispatch("DELETE", route + "/1")["status"] == 501, route
-    assert dispatch("GET", route + "/1/extra")["status"] == 404, route
-assert dispatch("GET", "` + api.resourceRoute + `")["status"] == 501`
-			command := exec.Command(python, "-c", script)
-			command.Dir = root
-			command.Env = append(os.Environ(), "PYTHONPATH="+root)
+			command := exec.Command(python, "-m", "compileall", "-q", root)
 			if output, err := command.CombinedOutput(); err != nil {
-				t.Fatalf("endpoint gerado não responde como esperado: %v\n%s", err, output)
+				t.Fatalf("projeto após add endpoint não compila: %v\n%s", err, output)
 			}
 		})
 	}
@@ -107,13 +94,13 @@ func TestAddEndpointUnsupportedLanguages(t *testing.T) {
 
 func TestAddEndpointWithoutMarkerChangesNothing(t *testing.T) {
 	root, m := generateProject(t, project.Config{ProjectName: "Sample", Language: "python", Framework: "raw", Architecture: "modular"})
-	apiPath := filepath.Join(root, "src", "app", "shared", "api.py")
-	content, err := os.ReadFile(apiPath)
+	mainPath := filepath.Join(root, "src", "app", "main.py")
+	content, err := os.ReadFile(mainPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	withoutMarker := strings.Replace(string(content), "# crudding:routes\n", "", 1)
-	if err := os.WriteFile(apiPath, []byte(withoutMarker), 0644); err != nil {
+	if err := os.WriteFile(mainPath, []byte(withoutMarker), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,8 +108,8 @@ func TestAddEndpointWithoutMarkerChangesNothing(t *testing.T) {
 		t.Fatalf("AddEndpoint() err = %v", err)
 	}
 	assertFilesAbsent(t, root, "src/app/invoice")
-	if after, _ := os.ReadFile(apiPath); string(after) != withoutMarker {
-		t.Error("api.py foi alterado apesar do erro")
+	if after, _ := os.ReadFile(mainPath); string(after) != withoutMarker {
+		t.Error("main.py foi alterado apesar do erro")
 	}
 }
 

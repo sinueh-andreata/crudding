@@ -1,9 +1,0 @@
-from src.app.application.use_cases.order_output import to_order_output
-
-
-class ListOrders:
-    def __init__(self, orders):
-        self.orders = orders
-
-    def execute(self) -> list[dict]:
-        return [to_order_output(order) for order in self.orders.find_all()]

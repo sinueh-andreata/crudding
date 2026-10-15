@@ -1,4 +1,0 @@
-def present_order(order: dict) -> dict:
-    amount = order["total"]
-    formatted = f"R$ {amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return {**order, "total": {"amount": amount, "formatted": formatted}}

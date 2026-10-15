@@ -14,63 +14,55 @@ var Frameworks = []string{"raw", "fastapi", "django", "flask"}
 
 var Architectures = []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
 
-type templateData struct {
-	common.BaseData
-	EntryModule   string
-	EntryScript   string
-	APIModule     string
-	Name          string
-	Class         string
-	Route         string
-	Package       string
-	HandlerParent string
-	HandlerModule string
-	// ServiceModule é um alias de APIModule mantido para templates antigos.
-	ServiceModule string
-	PackageName   string
+var FrameworkDependencies = map[string][]string{
+	"fastapi": {"fastapi>=0.115", "uvicorn[standard]>=0.30"},
+	"django":  {"Django>=5.1"},
+	"flask":   {"Flask>=3.0"},
+	"raw":     {},
 }
 
-// layout descreve uma arquitetura Python. Salvo indicação contrária, os
-// caminhos são relativos ao pacote principal (src/app, ou src/<projeto> no
-// flat) e, nos templates, a templates/python/architectures/<arquitetura>/.
+type templateData struct {
+	common.BaseData
+	Dependencies []string
+	EntryModule  string
+	EntryScript  string
+	Name         string
+	Class        string
+	Route        string
+	Modules      map[string]string
+}
+
+// layout descreve a estrutura de diretórios e arquivos de uma arquitetura Python.
+// Salvo indicação contrária, os caminhos são relativos ao pacote base (src/app, ou src/<projeto> no flat).
 type layout struct {
-	entry      string   // recebe o main.py do framework
-	api        string   // módulo com dispatch(), importado pelo entrypoint
-	packages   []string // subpacotes que recebem __init__.py
-	// Itens fora de src/, relativos à raiz do projeto (TemplatePath relativo
-	// ao diretório da arquitetura).
-	rootPackages []string
-	rootFiles    []common.File
+	entry        string        // recebe o main.py do framework (sempre "main.py")
+	packages     []string      // subpacotes que recebem __init__.py
+	rootPackages []string      // pacotes fora de src/ que recebem __init__.py
+	rootFiles    []common.File // arquivos gravados na raiz do projeto
 }
 
 var layouts = map[string]layout{
 	"flat": {
 		entry:        "main.py",
-		api:          "modulo.py",
 		rootPackages: []string{"tests"},
 		rootFiles: []common.File{
-			{TemplatePath: "setup.py.tmpl", OutputPath: "setup.py"},
-			{TemplatePath: "test_modulo.py.tmpl", OutputPath: "tests/test_modulo.py"},
+			{TemplatePath: "templates/python/base/flat/setup.py.tmpl", OutputPath: "setup.py"},
 		},
 	},
 	"layered": {
-		entry:    "router/router.py",
-		api:      "router/api.py",
-		packages: []string{"controllers", "services", "models", "router"},
+		entry:    "main.py",
+		packages: []string{"controllers", "services", "models"},
 	},
 	"modular": {
 		entry:    "main.py",
-		api:      "shared/api.py",
-		packages: []string{"resource", "shared"},
+		packages: []string{"resource"},
 	},
 	"hexagonal": {
 		entry:    "main.py",
-		api:      "routers/api.py",
 		packages: []string{"domain", "application", "ports", "infrastructure", "routers"},
 	},
 	"clean_arch": {
-		entry: "frameworks_and_drivers/web/main.py",
-		api:   "frameworks_and_drivers/web/api.py",
+		entry: "main.py",
 		packages: []string{
 			"domain/model",
 			"application/use_cases",
@@ -90,7 +82,6 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	if !ok {
 		return common.Plan{}, fmt.Errorf("arquitetura Python não suportada: %s", config.Architecture)
 	}
-	archDir := path.Join("templates/python/architectures", config.Architecture)
 
 	pkg := "app"
 	if config.Architecture == "flat" {
@@ -98,19 +89,16 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	}
 	pkgDir := path.Join("src", pkg)
 	entryScript := path.Join(pkgDir, layout.entry)
-	apiModule := module(path.Join(pkgDir, layout.api))
 
 	files := []common.File{
-		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
-		{TemplatePath: "templates/python/base/requirements.txt.tmpl", OutputPath: "requirements.txt"},
-		{TemplatePath: "templates/python/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-		{TemplatePath: "templates/python/base/pyproject.toml.tmpl", OutputPath: "pyproject.toml"},
+		{TemplatePath: path.Join("templates/python/base", config.Architecture, "README.md.tmpl"), OutputPath: "README.md"},
+		{TemplatePath: "templates/python/base/common/requirements.txt.tmpl", OutputPath: "requirements.txt"},
+		{TemplatePath: "templates/python/base/common/.gitignore.tmpl", OutputPath: ".gitignore"},
+		{TemplatePath: "templates/python/base/common/pyproject.toml.tmpl", OutputPath: "pyproject.toml"},
 		{TemplatePath: path.Join("templates/python/frameworks", config.Framework, "main.py.tmpl"), OutputPath: entryScript},
 	}
-	files = append(files, common.FilesFrom(archDir, pkgDir, layout.api)...)
-	for _, file := range layout.rootFiles {
-		files = append(files, common.File{TemplatePath: path.Join(archDir, file.TemplatePath), OutputPath: file.OutputPath})
-	}
+	files = append(files, layout.rootFiles...)
+
 	seedPatch, err := endpointPatchForPackage(pkgDir, config, "resource")
 	if err != nil {
 		return common.Plan{}, err
@@ -124,11 +112,9 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	packages = append(packages, seedPatch.Packages...)
 
 	data := seedPatch.Data.(templateData)
+	data.Dependencies = FrameworkDependencies[config.Framework]
 	data.EntryScript = entryScript
 	data.EntryModule = module(entryScript)
-	data.APIModule = apiModule
-	data.ServiceModule = apiModule
-	data.PackageName = strings.TrimPrefix(path.Dir(entryScript), "src/")
 	data.ProjectName = strings.ReplaceAll(filepath.Base(destination), "_", "-")
 
 	return common.Plan{

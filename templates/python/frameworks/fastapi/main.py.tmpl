@@ -1,22 +1,10 @@
-import json
-
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
-
-from {{.APIModule}} import dispatch
+from fastapi import FastAPI
+# crudding:imports
 
 app = FastAPI(title="{{.ProjectName}}")
 
+# crudding:routes
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PATCH", "DELETE"])
-@app.api_route("/", methods=["GET", "POST", "PATCH", "DELETE"])
-async def handle(request: Request):
-    raw_body = await request.body()
-    try:
-        body = json.loads(raw_body) if raw_body else None
-    except json.JSONDecodeError:
-        body = None
-    result = dispatch(request.method, request.url.path, body, dict(request.query_params))
-    if result.get("body") is None:
-        return Response(status_code=result["status"])
-    return JSONResponse(status_code=result["status"], content=result["body"])
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("{{.EntryModule}}:app", host="0.0.0.0", port=8000, reload=True)

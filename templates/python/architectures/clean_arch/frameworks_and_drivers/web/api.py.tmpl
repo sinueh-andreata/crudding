@@ -1,7 +1,0 @@
-# crudding:imports
-
-
-def dispatch(method: str, path: str, body=None, query=None) -> dict:
-    parts = [part for part in path.strip("/").split("/") if part]
-    # crudding:routes
-    return {"status": 404, "body": {"error": "route not found"}}
