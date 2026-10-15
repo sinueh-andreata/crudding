@@ -1,66 +1,7 @@
-from datetime import datetime, timezone
-
-
-class TaskStore:
-    def __init__(self):
-        self._tasks: dict[int, dict] = {}
-        self._next_id = 1
-
-    def list(self) -> list[dict]:
-        return list(self._tasks.values())
-
-    def get(self, task_id: int) -> dict | None:
-        return self._tasks.get(task_id)
-
-    def create(self, title: str) -> dict:
-        task = {
-            "id": self._next_id,
-            "title": title,
-            "done": False,
-            "createdAt": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-        }
-        self._tasks[self._next_id] = task
-        self._next_id += 1
-        return task
-
-    def complete(self, task_id: int) -> dict | None:
-        task = self.get(task_id)
-        if task is not None:
-            task["done"] = True
-        return task
-
-    def remove(self, task_id: int) -> bool:
-        return self._tasks.pop(task_id, None) is not None
-
-
-_store = TaskStore()
-_store.create("Explorar o projeto gerado pelo crudding")
+# crudding:imports
 
 
 def dispatch(method: str, path: str, body=None, query=None) -> dict:
     parts = [part for part in path.strip("/").split("/") if part]
-    if method == "GET" and parts == ["tasks"]:
-        return {"status": 200, "body": _store.list()}
-    if method == "POST" and parts == ["tasks"]:
-        title = body.get("title") if isinstance(body, dict) else None
-        if not isinstance(title, str) or not title.strip():
-            return {"status": 400, "body": {"error": "title is required"}}
-        return {"status": 201, "body": _store.create(title.strip())}
-    if len(parts) == 2 and parts[0] == "tasks":
-        try:
-            task_id = int(parts[1])
-        except ValueError:
-            task_id = 0
-        if method == "GET":
-            task = _store.get(task_id)
-            return {"status": 200, "body": task} if task else {"status": 404, "body": {"error": "task not found"}}
-        if method == "DELETE":
-            return {"status": 204} if _store.remove(task_id) else {"status": 404, "body": {"error": "task not found"}}
-    if method == "PATCH" and len(parts) == 3 and parts[0] == "tasks" and parts[2] == "done":
-        try:
-            task_id = int(parts[1])
-        except ValueError:
-            task_id = 0
-        task = _store.complete(task_id)
-        return {"status": 200, "body": task} if task else {"status": 404, "body": {"error": "task not found"}}
+    # crudding:routes
     return {"status": 404, "body": {"error": "route not found"}}

@@ -1,0 +1,24 @@
+from {{.Package}}.domain.{{.Name}} import {{.Class}}
+from {{.Package}}.ports.{{.Name}}_repository import {{.Class}}Repository
+
+
+class {{.Class}}Service:
+    def __init__(self, repository: {{.Class}}Repository):
+        self.repository = repository
+
+    def list(self) -> list[{{.Class}}]:
+        return self.repository.find_all()
+
+    def get(self, item_id: str) -> {{.Class}} | None:
+        return self.repository.find_by_id(item_id)
+
+    def create(self, payload: dict) -> {{.Class}}:
+        # TODO: monte o {{.Class}} a partir do payload e persista com self.repository.save.
+        raise NotImplementedError
+
+    def update(self, item_id: str, payload: dict) -> {{.Class}}:
+        # TODO: carregue, altere e persista o {{.Class}} com self.repository.
+        raise NotImplementedError
+
+    def delete(self, item_id: str) -> None:
+        self.repository.delete(item_id)

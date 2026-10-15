@@ -16,9 +16,15 @@ var Architectures = []string{"flat", "layered", "modular", "hexagonal", "clean_a
 
 type templateData struct {
 	common.BaseData
-	EntryModule string
-	EntryScript string
-	APIModule   string
+	EntryModule   string
+	EntryScript   string
+	APIModule     string
+	Name          string
+	Class         string
+	Route         string
+	Package       string
+	HandlerParent string
+	HandlerModule string
 	// ServiceModule é um alias de APIModule mantido para templates antigos.
 	ServiceModule string
 	PackageName   string
@@ -31,7 +37,6 @@ type layout struct {
 	entry      string   // recebe o main.py do framework
 	api        string   // módulo com dispatch(), importado pelo entrypoint
 	packages   []string // subpacotes que recebem __init__.py
-	components []string // demais arquivos da arquitetura
 	// Itens fora de src/, relativos à raiz do projeto (TemplatePath relativo
 	// ao diretório da arquitetura).
 	rootPackages []string
@@ -52,42 +57,16 @@ var layouts = map[string]layout{
 		entry:    "router/router.py",
 		api:      "router/api.py",
 		packages: []string{"controllers", "services", "models", "router"},
-		components: []string{
-			"controllers/user_controller.py",
-			"controllers/order_controller.py",
-			"services/user_service.py",
-			"services/order_service.py",
-			"models/user.py",
-			"models/order.py",
-			"models/errors.py",
-		},
 	},
 	"modular": {
 		entry:    "main.py",
 		api:      "shared/api.py",
-		packages: []string{"catalog", "orders", "shared"},
-		components: []string{
-			"catalog/models.py",
-			"catalog/views.py",
-			"catalog/service.py",
-			"orders/models.py",
-			"orders/service.py",
-			"orders/views.py",
-			"shared/errors.py",
-		},
+		packages: []string{"resource", "shared"},
 	},
 	"hexagonal": {
 		entry:    "main.py",
 		api:      "routers/api.py",
 		packages: []string{"domain", "application", "ports", "infrastructure", "routers"},
-		components: []string{
-			"domain/entities.py",
-			"domain/exceptions.py",
-			"application/product_service.py",
-			"ports/product_repository.py",
-			"infrastructure/in_memory_product_repository.py",
-			"routers/product.py",
-		},
 	},
 	"clean_arch": {
 		entry: "frameworks_and_drivers/web/main.py",
@@ -99,22 +78,7 @@ var layouts = map[string]layout{
 			"interface_adapters/controllers",
 			"interface_adapters/presenters",
 			"interface_adapters/persistence",
-			"frameworks_and_drivers/database",
 			"frameworks_and_drivers/web",
-		},
-		components: []string{
-			"domain/exceptions.py",
-			"domain/model/order.py",
-			"application/port/outbound/order_repository.py",
-			"application/use_cases/order_output.py",
-			"application/use_cases/create_order.py",
-			"application/use_cases/get_order.py",
-			"application/use_cases/list_orders.py",
-			"application/use_cases/pay_order.py",
-			"interface_adapters/controllers/order_controller.py",
-			"interface_adapters/presenters/order_presenter.py",
-			"interface_adapters/persistence/order_repository.py",
-			"bootstrap.py",
 		},
 	},
 }
@@ -143,29 +107,34 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 		{TemplatePath: "templates/python/base/pyproject.toml.tmpl", OutputPath: "pyproject.toml"},
 		{TemplatePath: path.Join("templates/python/frameworks", config.Framework, "main.py.tmpl"), OutputPath: entryScript},
 	}
-	files = append(files, common.FilesFrom(archDir, pkgDir, append([]string{layout.api}, layout.components...)...)...)
+	files = append(files, common.FilesFrom(archDir, pkgDir, layout.api)...)
 	for _, file := range layout.rootFiles {
 		files = append(files, common.File{TemplatePath: path.Join(archDir, file.TemplatePath), OutputPath: file.OutputPath})
 	}
+	seedPatch, err := endpointPatchForPackage(pkgDir, config, "resource")
+	if err != nil {
+		return common.Plan{}, err
+	}
+	files = append(files, seedPatch.Files...)
 
 	packages := append([]string{pkgDir}, layout.rootPackages...)
 	for _, sub := range layout.packages {
 		packages = append(packages, path.Join(pkgDir, sub))
 	}
+	packages = append(packages, seedPatch.Packages...)
 
-	data := templateData{
-		BaseData:      common.NewBaseData(config),
-		EntryScript:   entryScript,
-		EntryModule:   module(entryScript),
-		APIModule:     apiModule,
-		ServiceModule: apiModule,
-		PackageName:   strings.TrimPrefix(path.Dir(entryScript), "src/"),
-	}
+	data := seedPatch.Data.(templateData)
+	data.EntryScript = entryScript
+	data.EntryModule = module(entryScript)
+	data.APIModule = apiModule
+	data.ServiceModule = apiModule
+	data.PackageName = strings.TrimPrefix(path.Dir(entryScript), "src/")
 	data.ProjectName = strings.ReplaceAll(filepath.Base(destination), "_", "-")
 
 	return common.Plan{
 		Files:   files,
 		Data:    data,
+		Inserts: seedPatch.Inserts,
 		Prepare: func(root string) error { return common.CreatePackages(root, packages, nil) },
 	}, nil
 }

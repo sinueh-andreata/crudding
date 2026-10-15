@@ -12,8 +12,9 @@ import (
 // apenas montam o Plan; criar o diretório, renderizar e limpar em caso de
 // falha fica a cargo de Scaffold.
 type Plan struct {
-	Files []File
-	Data  any
+	Files   []File
+	Data    any
+	Inserts []Insert
 	// Prepare roda depois da criação do diretório raiz e antes da escrita dos
 	// arquivos (ex.: criar pacotes Python com __init__.py). Opcional.
 	Prepare func(root string) error
@@ -41,7 +42,13 @@ func Scaffold(destination string, config project.Config, templates fs.FS, plan P
 	if err = manifest.Write(root, manifest.New(config)); err != nil {
 		return err
 	}
-	return WriteFiles(root, templates, plan.Data, plan.Files)
+	if err = WriteFiles(root, templates, plan.Data, plan.Files); err != nil {
+		return err
+	}
+	if len(plan.Inserts) > 0 {
+		_, err = Apply(root, templates, Patch{Inserts: plan.Inserts})
+	}
+	return err
 }
 
 // BaseData reúne os campos de template comuns a todas as linguagens. Deve ser

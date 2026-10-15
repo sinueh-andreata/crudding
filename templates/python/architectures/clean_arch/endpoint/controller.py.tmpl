@@ -1,0 +1,22 @@
+from {{.Package}}.interface_adapters.presenters.{{.Name}}_presenter import present_{{.Name}}
+
+
+class {{.Class}}Controller:
+    def __init__(self, use_cases):
+        self.use_cases = use_cases
+
+    def list_all(self) -> list[dict]:
+        return [present_{{.Name}}(item) for item in self.use_cases["list"].execute()]
+
+    def get(self, item_id: str) -> dict | None:
+        item = self.use_cases["get"].execute(item_id)
+        return present_{{.Name}}(item) if item is not None else None
+
+    def create(self, payload: dict) -> dict:
+        return present_{{.Name}}(self.use_cases["create"].execute(payload))
+
+    def update(self, item_id: str, payload: dict) -> dict:
+        return present_{{.Name}}(self.use_cases["update"].execute(item_id, payload))
+
+    def delete(self, item_id: str) -> None:
+        self.use_cases["delete"].execute(item_id)

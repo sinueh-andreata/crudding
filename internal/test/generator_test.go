@@ -34,11 +34,11 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/main.py", "tests/test_modulo.py"},
-		"layered":    {"src/app/controllers/user_controller.py", "src/app/models/errors.py", "src/app/models/order.py", "src/app/router/api.py", "src/app/router/router.py"},
-		"modular":    {"src/app/catalog/service.py", "src/app/orders/views.py", "src/app/shared/api.py", "src/app/shared/errors.py"},
-		"hexagonal":  {"src/app/domain/entities.py", "src/app/application/product_service.py", "src/app/ports/product_repository.py", "src/app/infrastructure/in_memory_product_repository.py", "src/app/routers/api.py", "src/app/main.py"},
-		"clean_arch": {"src/app/domain/model/order.py", "src/app/application/use_cases/create_order.py", "src/app/application/use_cases/pay_order.py", "src/app/application/port/outbound/order_repository.py", "src/app/interface_adapters/controllers/order_controller.py", "src/app/frameworks_and_drivers/web/api.py", "src/app/bootstrap.py"},
+		"flat":       {"pyproject.toml", "setup.py", "src/sample/modulo.py", "src/sample/resource.py", "src/sample/main.py", "tests/test_modulo.py"},
+		"layered":    {"src/app/controllers/resource_controller.py", "src/app/models/resource.py", "src/app/router/api.py", "src/app/router/resource_routes.py", "src/app/router/router.py"},
+		"modular":    {"src/app/resource/models.py", "src/app/resource/service.py", "src/app/resource/views.py", "src/app/shared/api.py"},
+		"hexagonal":  {"src/app/domain/resource.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/routers/api.py", "src/app/routers/resource.py", "src/app/main.py"},
+		"clean_arch": {"src/app/domain/model/resource.py", "src/app/application/use_cases/create_resource.py", "src/app/application/use_cases/list_resource.py", "src/app/application/port/outbound/resource_repository.py", "src/app/interface_adapters/controllers/resource_controller.py", "src/app/frameworks_and_drivers/web/api.py", "src/app/frameworks_and_drivers/web/resource_routes.py"},
 	},
 }
 
@@ -50,14 +50,14 @@ var forbiddenFiles = map[string]map[string][]string{
 	},
 }
 
-// Trechos de código que comprovam que a arquitetura gerou lógica funcional.
+// Trechos de código que comprovam que o scaffold genérico foi gerado.
 var codeChecks = map[string]map[string][2]string{
 	"python": {
-		"flat":       {"src/sample/modulo.py", "class TaskStore"},
+		"flat":       {"src/sample/resource.py", "class Resource"},
 		"layered":    {"src/app/router/api.py", "def dispatch"},
-		"modular":    {"src/app/catalog/service.py", "def add_product"},
+		"modular":    {"src/app/resource/service.py", "def list_all"},
 		"hexagonal":  {"src/app/routers/api.py", "def dispatch"},
-		"clean_arch": {"src/app/application/use_cases/create_order.py", "class CreateOrder"},
+		"clean_arch": {"src/app/application/use_cases/create_resource.py", "class CreateResource"},
 	},
 }
 
@@ -157,7 +157,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 				}
 			case "python":
 				if config.Architecture == "flat" {
-					assertFileContains(t, destination, "tests/test_modulo.py", "def test_task_store_create_complete_and_remove")
+					assertFileContains(t, destination, "tests/test_modulo.py", "def test_resource_routes_are_ready_for_implementation")
 				}
 			}
 
@@ -187,7 +187,7 @@ func TestGenerateRefusesExistingDirectory(t *testing.T) {
 	}
 }
 
-func TestPythonDispatchersMatchNodeDemos(t *testing.T) {
+func TestPythonGenericResourceDispatchers(t *testing.T) {
 	python, err := exec.LookPath("python3")
 	if err != nil {
 		t.Skip("python3 is not installed")
@@ -195,35 +195,13 @@ func TestPythonDispatchersMatchNodeDemos(t *testing.T) {
 	templates := os.DirFS(filepath.Join("..", ".."))
 	cases := []struct {
 		architecture string
-		script       string
+		module       string
 	}{
-		{"flat", `from src.sample.modulo import dispatch
-created = dispatch("POST", "/tasks", {"title": "test"})["body"]
-assert created["done"] is False and "createdAt" in created
-assert dispatch("PATCH", f"/tasks/{created['id']}/done")["body"]["done"] is True
-assert dispatch("DELETE", f"/tasks/{created['id']}")["status"] == 204`},
-		{"layered", `from src.app.router.api import dispatch
-assert dispatch("GET", "/users")["body"][0]["email"] == "ada@example.com"
-order = dispatch("POST", "/orders", {"userId": 1, "items": [{"product": "book", "quantity": 2, "unitPrice": 3.25}]})
-assert order["status"] == 201 and order["body"]["total"] == 6.5
-assert dispatch("GET", "/orders", query={"userId": "1"})["body"][0]["id"] == order["body"]["id"]
-assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["body"]["status"] == "paid"
-assert dispatch("POST", f"/orders/{order['body']['id']}/cancel")["status"] == 409`},
-		{"modular", `from src.app.shared.api import dispatch
-assert dispatch("GET", "/health")["body"] == {"status": "ok"}
-order = dispatch("POST", "/orders", {"items": [{"productId": 1, "quantity": 2}]})
-assert order["status"] == 201 and order["body"]["total"] == 900
-assert dispatch("GET", "/products/1")["body"]["stock"] == 8`},
-		{"hexagonal", `from src.app.routers.api import dispatch
-product = dispatch("GET", "/products")["body"][0]
-discounted = dispatch("POST", f"/products/{product['id']}/discount", {"percent": 10})
-assert discounted["status"] == 200 and discounted["body"]["price"] == 288
-assert dispatch("POST", f"/products/{product['id']}/discount", {"percent": 100})["status"] == 422`},
-		{"clean_arch", `from src.app.frameworks_and_drivers.web.api import dispatch
-order = dispatch("POST", "/orders", {"customerId": "customer-1", "items": [{"sku": "SKU-1", "quantity": 2, "unitPrice": 12.5}]})
-assert order["status"] == 201 and order["body"]["total"] == {"amount": 25.0, "formatted": "R$ 25,00"}
-assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["body"]["status"] == "paid"
-assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["status"] == 409`},
+		{"flat", "src.sample.modulo"},
+		{"layered", "src.app.router.api"},
+		{"modular", "src.app.shared.api"},
+		{"hexagonal", "src.app.routers.api"},
+		{"clean_arch", "src.app.frameworks_and_drivers.web.api"},
 	}
 
 	for _, testCase := range cases {
@@ -233,11 +211,22 @@ assert dispatch("POST", f"/orders/{order['body']['id']}/pay")["status"] == 409`}
 			if err := generator.Generate(destination, config, templates); err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
-			command := exec.Command(python, "-c", testCase.script)
+			script := `from ` + testCase.module + ` import dispatch
+for method, path, body in (
+	("GET", "/resource", None),
+	("POST", "/resource", {"name": "example"}),
+	("GET", "/resource/1", None),
+	("PATCH", "/resource/1", {"name": "updated"}),
+	("DELETE", "/resource/1", None),
+):
+	assert dispatch(method, path, body)["status"] == 501, (method, path)
+assert dispatch("GET", "/resource/1/extra")["status"] == 404
+assert dispatch("GET", "/unknown")["status"] == 404`
+			command := exec.Command(python, "-c", script)
 			command.Dir = destination
 			command.Env = append(os.Environ(), "PYTHONPATH="+destination)
 			if output, err := command.CombinedOutput(); err != nil {
-				t.Fatalf("generated Python demo failed: %v\n%s", err, output)
+				t.Fatalf("generated generic resource failed: %v\n%s", err, output)
 			}
 		})
 	}

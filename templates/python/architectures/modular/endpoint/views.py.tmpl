@@ -1,0 +1,24 @@
+from dataclasses import asdict
+
+from {{.Package}}.{{.Name}} import service
+
+
+def list_all() -> list[dict]:
+    return [asdict(item) for item in service.list_all()]
+
+
+def get(item_id: str) -> dict | None:
+    item = service.get(item_id)
+    return asdict(item) if item is not None else None
+
+
+def create(payload: dict) -> dict:
+    return asdict(service.create(payload))
+
+
+def update(item_id: str, payload: dict) -> dict:
+    return asdict(service.update(item_id, payload))
+
+
+def delete(item_id: str) -> None:
+    service.delete(item_id)

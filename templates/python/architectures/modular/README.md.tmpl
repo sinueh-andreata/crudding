@@ -9,11 +9,10 @@ Cada feature tem seus modelos, serviços e views em `src/app/`; `shared/` conté
 
 ## API
 
-- `GET /health` verifica a aplicação.
-- `GET /products`, `GET /products/{id}` e `POST /products` cadastram e consultam catálogo (`sku`, `name`, `price` e `stock`).
-- `GET /orders`, `GET /orders/{id}` e `POST /orders` criam pedidos com itens `productId` e `quantity`.
+- `GET /resource` e `GET /resource/{id}`: consulta recursos.
+- `POST /resource`, `PATCH /resource/{id}` e `DELETE /resource/{id}`: operações CRUD.
 
-O pedido reserva estoque e calcula o total com os preços do catálogo. Os dados ficam em memória.
+O exemplo deixa a implementação das operações como exercício; até lá, as rotas respondem `501`.
 
 ## Executar
 

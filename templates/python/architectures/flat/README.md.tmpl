@@ -9,12 +9,10 @@ O pacote da aplicação fica em `src/`, e os testes ficam em `tests/`.
 
 ## API
 
-- `GET /tasks` e `GET /tasks/{id}`: lista e consulta tarefas.
-- `POST /tasks` com `{"title": "..."}`: cria uma tarefa.
-- `PATCH /tasks/{id}/done`: conclui uma tarefa.
-- `DELETE /tasks/{id}`: remove uma tarefa.
+- `GET /resource` e `GET /resource/{id}`: consulta recursos.
+- `POST /resource`, `PATCH /resource/{id}` e `DELETE /resource/{id}`: operações CRUD.
 
-As tarefas ficam em memória e o serviço inicia com uma tarefa de exemplo.
+O exemplo deixa a implementação das operações como exercício; até lá, as rotas respondem `501`.
 
 ## Executar
 

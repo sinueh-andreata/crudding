@@ -1,15 +1,6 @@
-from src.{{.PackageName}}.modulo import TaskStore, dispatch
+from src.{{.PackageName}}.modulo import dispatch
 
 
-def test_task_store_create_complete_and_remove():
-    store = TaskStore()
-    task = store.create("write tests")
-    assert task["id"] == 1
-    assert store.complete(task["id"])["done"] is True
-    assert store.remove(task["id"]) is True
-    assert store.list() == []
-
-
-def test_create_route_rejects_missing_title():
-    result = dispatch("POST", "/tasks", {})
-    assert result["status"] == 400
+def test_resource_routes_are_ready_for_implementation():
+    assert dispatch("GET", "/resource")["status"] == 501
+    assert dispatch("POST", "/resource", {"name": "example"})["status"] == 501

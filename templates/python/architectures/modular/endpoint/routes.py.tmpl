@@ -1,0 +1,27 @@
+{{/* Compartilhado pelas arquiteturas cujo handler expõe list_all/get/create/update/delete devolvendo dicts. */ -}}
+from {{.HandlerParent}} import {{.HandlerModule}} as handler
+
+
+def route(method: str, parts: list[str], body=None, query=None) -> dict:
+    payload = body if isinstance(body, dict) else {}
+    try:
+        if not parts:
+            if method == "GET":
+                return {"status": 200, "body": handler.list_all()}
+            if method == "POST":
+                return {"status": 201, "body": handler.create(payload)}
+        elif len(parts) == 1:
+            item_id = parts[0]
+            if method == "GET":
+                item = handler.get(item_id)
+                if item is None:
+                    return {"status": 404, "body": {"error": f"{{.Route}} {item_id} not found"}}
+                return {"status": 200, "body": item}
+            if method == "PATCH":
+                return {"status": 200, "body": handler.update(item_id, payload)}
+            if method == "DELETE":
+                handler.delete(item_id)
+                return {"status": 204}
+        return {"status": 404, "body": {"error": "route not found"}}
+    except NotImplementedError:
+        return {"status": 501, "body": {"error": "{{.Route}}: not implemented"}}

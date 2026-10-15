@@ -5,19 +5,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"crudding"
 	"crudding/internal/generator"
-	"crudding/internal/models"
+	"crudding/internal/manifest"
 	"crudding/internal/project"
-	"crudding/internal/types"
+	"crudding/internal/tui"
 )
 
 // errCancelled sinaliza que o usuário saiu do menu; não é tratado como falha.
 var errCancelled = errors.New("cancelado pelo usuário")
 
 func choose(title string, options []string) (string, error) {
-	choice, confirmed, err := models.ChooseOption(title, options)
+	choice, confirmed, err := tui.ChooseOption(title, options)
 	if err != nil {
 		return "", err
 	}
@@ -27,7 +29,7 @@ func choose(title string, options []string) (string, error) {
 	return choice, nil
 }
 
-func run() error {
+func runNew() error {
 	languages := generator.Languages()
 	names := make([]string, len(languages))
 	for index, language := range languages {
@@ -61,7 +63,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	config := types.ProjectConfig{
+	config := project.Config{
 		ProjectName:  projectName,
 		Language:     language.Name,
 		Runtime:      runtime,
@@ -83,7 +85,57 @@ func run() error {
 	return nil
 }
 
+func runAddEndpoint() error {
+	workingDirectory, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	root, m, err := manifest.Find(workingDirectory)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Projeto %s: %s\n", root, m.Stack())
+	if err := generator.CheckEndpointSupport(m); err != nil {
+		return err
+	}
+	name, err := project.ReadEndpointName(os.Stdin, os.Stdout)
+	if err != nil {
+		return err
+	}
+	result, err := generator.AddEndpoint(root, m, name, crudding.Templates)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\nEndpoint %s criado.\n", name)
+	for _, file := range result.Created {
+		fmt.Printf("  criado     %s\n", file)
+	}
+	for _, file := range result.Modified {
+		fmt.Printf("  alterado   %s\n", file)
+	}
+	return nil
+}
+
+const usage = `uso:
+  crudding                 gera um novo projeto (menu interativo)
+  crudding add endpoint    adiciona um endpoint CRUD ao projeto atual (lê o project.crud)
+`
+
 func main() {
+	var run func() error
+	switch args := os.Args[1:]; {
+	case len(args) == 0:
+		run = runNew
+	case slices.Equal(args, []string{"add", "endpoint"}):
+		run = runAddEndpoint
+	case len(args) == 1 && (args[0] == "-h" || args[0] == "--help" || args[0] == "help"):
+		fmt.Print(usage)
+		return
+	default:
+		fmt.Fprintf(os.Stderr, "crudding: comando desconhecido: %s\n%s", strings.Join(args, " "), usage)
+		os.Exit(2)
+	}
 	if err := run(); err != nil && !errors.Is(err, errCancelled) {
 		fmt.Fprintf(os.Stderr, "crudding: %v\n", err)
 		os.Exit(1)

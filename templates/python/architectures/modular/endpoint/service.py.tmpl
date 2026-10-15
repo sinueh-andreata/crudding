@@ -1,0 +1,21 @@
+from {{.Package}}.{{.Name}}.models import {{.Class}}
+
+
+def list_all() -> list[{{.Class}}]:
+    raise NotImplementedError
+
+
+def get(item_id: str) -> {{.Class}} | None:
+    raise NotImplementedError
+
+
+def create(payload: dict) -> {{.Class}}:
+    raise NotImplementedError
+
+
+def update(item_id: str, payload: dict) -> {{.Class}}:
+    raise NotImplementedError
+
+
+def delete(item_id: str) -> None:
+    raise NotImplementedError

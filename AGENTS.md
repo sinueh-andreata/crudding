@@ -42,27 +42,31 @@ crudding/
 ├── cmd/
 │   └── crudding/
 │       └── main.go              # Ponto de entrada do executável e orquestração do fluxo
+│   └── genall/
+│       └── main.go              # Gera todas as combinações suportadas para validação
 ├── internal/
 │   ├── generator/
 │   │   ├── common/
-│   │   │   └── files.go         # Utilitários de escrita de arquivos, template parsing e pacotes Python
-│   │   ├── golang/
-│   │   │   └── generate.go      # Gerador específico para projetos Go (flat, layered, modular, hexagonal, clean arch)
-│   │   ├── node/
-│   │   │   └── generate.go      # Gerador específico para projetos Node (JS/TS)
-│   │   ├── python/
-│   │   │   └── generate.go      # Gerador específico para projetos Python
+│   │   │   ├── files.go         # Utilitários de escrita de arquivos e template parsing
+│   │   │   ├── scaffold.go      # Criação do projeto (Plan) e gravação do project.crud
+│   │   │   └── patch.go         # Alterações em projeto existente (Patch): arquivos novos, pacotes Python e inserções em markers, com rollback
+│   │   ├── langs/
+│   │   │   ├── golang/generate.go # Gerador específico para projetos Go
+│   │   │   ├── node/generate.go   # Gerador específico para projetos Node (JS/TS)
+│   │   │   └── python/
+│   │   │       ├── generate.go   # Gerador específico para projetos Python
+│   │   │       └── endpoint.go   # Layouts de "add endpoint" por arquitetura Python
 │   │   ├── generator.go         # Dispatcher central do gerador
-│   │   └── generator_test.go    # Testes cobrindo combinações de matriz de templates
-│   ├── models/
-│   │   ├── menu.go              # Componente TUI (Bubble Tea) para seleção interativa
-│   │   └── menu_test.go         # Testes de unidade do modelo de menu
+│   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint"
+│   ├── manifest/
+│   │   └── manifest.go          # Leitura/escrita do project.crud (JSON) e busca nos diretórios pais
 │   ├── project/
+│   │   ├── config.go            # Configuração compartilhada do projeto
 │   │   ├── name.go              # Leitura e sanitização de nome do projeto
-│   │   ├── name_test.go         # Testes de validação de nome e regex
 │   │   └── project.go           # Utilitário de slugify (ProjectSlug)
-│   └── types/
-│       └── project.go           # Estruturas de dados compartilhadas (ProjectConfig)
+│   ├── test/                    # Testes de integração e unidade de internal/
+│   └── tui/
+│       └── menu.go              # Menu Bubble Tea para seleção interativa
 ├── templates/                   # Arquivos de template (.tmpl) para cada stack
 │   ├── go/
 │   │   ├── base/                # go.mod, go.sum, .gitignore
@@ -80,7 +84,7 @@ crudding/
 
 ## 3. Fluxo de Execução
 
-1. **Seleção Interativa (`cmd/crudding/main.go` & `internal/models/menu.go`)**:
+1. **Seleção Interativa (`cmd/crudding/main.go` & `internal/tui/menu.go`)**:
    - Pergunta a **Linguagem** (`python`, `go`, `node`).
    - Se `node`, pergunta o **Runtime** (`js`, `ts`).
    - Pergunta o **Framework** compatível com a linguagem selecionada.
@@ -89,10 +93,22 @@ crudding/
 2. **Validação de Segurança (`internal/project/name.go`)**:
    - Rejeita caracteres inválidos e tentativas de path traversal (`..`, barras, etc.).
    - Garante que diretórios existentes nunca sejam sobrescritos (`internal/generator/common/files.go`).
-3. **Geração dos Arquivos (`internal/generator/*`)**:
+3. **Geração dos Arquivos (`internal/generator/` e `internal/generator/langs/`)**:
    - Define a estrutura de diretórios baseado no layout da arquitetura escolhida.
    - Processa os templates embutidos utilizando `text/template` e grava no diretório de destino.
    - Em caso de falha no meio do processo, o diretório gerado é limpo automaticamente (`defer os.RemoveAll`).
+
+4. **Manifesto**: `common.Scaffold` grava `project.crud` (JSON, `internal/manifest`) na raiz de todo projeto gerado.
+
+### `crudding add endpoint`
+
+1. `manifest.Find` procura o `project.crud` a partir do diretório atual, subindo pelos pais.
+2. `generator.CheckEndpointSupport` valida o manifesto contra o registry e confirma que a linguagem tem `endpoint` (hoje só Python; Go e Node devolvem "ainda não suportado").
+3. `project.ReadEndpointName` lê o nome (snake_case).
+4. A função `endpoint` da linguagem monta um `common.Patch`: os templates de `templates/<lang>/endpoint/`, os pacotes e as inserções nos markers `# crudding:imports` / `# crudding:routes` do módulo de API.
+5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, cada marker aparece uma única vez) e desfaz as alterações se a gravação falhar.
+
+**Para suportar uma nova linguagem**: implemente `endpoint` em `internal/generator/<lang>/endpoint.go`, registre-o em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates em `templates/<lang>/endpoint/`. Os markers não podem ser removidos dos templates existentes.
 
 ---
 
@@ -102,6 +118,9 @@ crudding/
 ```sh
 # Executar a CLI em desenvolvimento
 go run ./cmd/crudding
+
+# Adicionar um endpoint a um projeto gerado (rodar dentro do projeto)
+go run /caminho/do/crudding/cmd/crudding add endpoint
 
 # Executar testes unitários
 go test ./...
@@ -134,4 +153,4 @@ Ao implementar novas features, correções ou refatorações neste repositório:
    - Atualize `frameworkOptionsFor` e `architectureOptionsFor` em `cmd/crudding/main.go`.
    - Adicione no mapa de arquiteturas/layouts no respectivo pacote (`internal/generator/<lang>/generate.go`).
    - Crie os templates correspondentes sob `templates/<lang>/`.
-   - Adicione os casos de teste em `internal/generator/generator_test.go`.
+   - Adicione os casos de teste em `internal/test/`.

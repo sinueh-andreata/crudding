@@ -13,14 +13,14 @@ import (
 	"crudding/internal/project"
 )
 
-// Módulo com dispatch() e uma rota demo que deve continuar funcionando após
+// Módulo com dispatch() e o recurso inicial que deve continuar registrado após
 // o add endpoint, por arquitetura Python.
-var pythonAPIs = map[string]struct{ api, module, demoRoute string }{
-	"flat":       {"src/sample/modulo.py", "src.sample.modulo", "/tasks"},
-	"layered":    {"src/app/router/api.py", "src.app.router.api", "/users"},
-	"modular":    {"src/app/shared/api.py", "src.app.shared.api", "/health"},
-	"hexagonal":  {"src/app/routers/api.py", "src.app.routers.api", "/products"},
-	"clean_arch": {"src/app/frameworks_and_drivers/web/api.py", "src.app.frameworks_and_drivers.web.api", "/orders"},
+var pythonAPIs = map[string]struct{ api, module, resourceRoute string }{
+	"flat":       {"src/sample/modulo.py", "src.sample.modulo", "/resource"},
+	"layered":    {"src/app/router/api.py", "src.app.router.api", "/resource"},
+	"modular":    {"src/app/shared/api.py", "src.app.shared.api", "/resource"},
+	"hexagonal":  {"src/app/routers/api.py", "src.app.routers.api", "/resource"},
+	"clean_arch": {"src/app/frameworks_and_drivers/web/api.py", "src.app.frameworks_and_drivers.web.api", "/resource"},
 }
 
 func generateProject(t *testing.T, config project.Config) (string, manifest.Manifest) {
@@ -82,7 +82,7 @@ for route in ("/order-item", "/invoice"):
     assert dispatch("PATCH", route + "/1", {"x": 1})["status"] == 501, route
     assert dispatch("DELETE", route + "/1")["status"] == 501, route
     assert dispatch("GET", route + "/1/extra")["status"] == 404, route
-assert dispatch("GET", "` + api.demoRoute + `")["status"] == 200`
+assert dispatch("GET", "` + api.resourceRoute + `")["status"] == 501`
 			command := exec.Command(python, "-c", script)
 			command.Dir = root
 			command.Env = append(os.Environ(), "PYTHONPATH="+root)

@@ -12,25 +12,14 @@ import (
 )
 
 const (
-	endpointDir   = "templates/python/endpoint"
 	importsMarker = "# crudding:imports"
 	routesMarker  = "# crudding:routes"
 	nameToken     = "{name}"
 	sharedRoutes  = "routes.py" // template de rotas usado quando o layout define handler
 )
 
-type endpointData struct {
-	Name    string // identificador snake_case, ex.: order_item
-	Class   string // ex.: OrderItem
-	Route   string // primeiro segmento da URL, ex.: order-item
-	Package string // pacote base, ex.: src.app
-	// Módulo importado como "handler" pelo routes.py compartilhado.
-	HandlerParent string
-	HandlerModule string
-}
-
-// endpointFile liga um template (relativo a templates/python/endpoint) ao
-// arquivo gerado, relativo ao pacote base. {name} vira o nome do recurso.
+// endpointFile liga um template (relativo à arquitetura) ao arquivo gerado,
+// relativo ao pacote base. {name} vira o nome do recurso.
 type endpointFile struct {
 	template string
 	output   string
@@ -51,16 +40,16 @@ var endpointLayouts = map[string]endpointLayout{
 	"flat": {
 		api:    "modulo.py",
 		routes: "{name}.py",
-		files:  []endpointFile{{"flat/resource.py", "{name}.py"}},
+		files:  []endpointFile{{"resource.py", "{name}.py"}},
 	},
 	"layered": {
 		api:     "router/api.py",
 		routes:  "router/{name}_routes.py",
 		handler: "controllers/{name}_controller.py",
 		files: []endpointFile{
-			{"layered/model.py", "models/{name}.py"},
-			{"layered/service.py", "services/{name}_service.py"},
-			{"layered/controller.py", "controllers/{name}_controller.py"},
+			{"model.py", "models/{name}.py"},
+			{"service.py", "services/{name}_service.py"},
+			{"controller.py", "controllers/{name}_controller.py"},
 		},
 	},
 	"modular": {
@@ -69,9 +58,9 @@ var endpointLayouts = map[string]endpointLayout{
 		handler:  "{name}/views.py",
 		packages: []string{"{name}"},
 		files: []endpointFile{
-			{"modular/models.py", "{name}/models.py"},
-			{"modular/service.py", "{name}/service.py"},
-			{"modular/views.py", "{name}/views.py"},
+			{"models.py", "{name}/models.py"},
+			{"service.py", "{name}/service.py"},
+			{"views.py", "{name}/views.py"},
 		},
 	},
 	"hexagonal": {
@@ -79,28 +68,28 @@ var endpointLayouts = map[string]endpointLayout{
 		routes:  "routers/{name}_routes.py",
 		handler: "routers/{name}.py",
 		files: []endpointFile{
-			{"hexagonal/entity.py", "domain/{name}.py"},
-			{"hexagonal/port.py", "ports/{name}_repository.py"},
-			{"hexagonal/service.py", "application/{name}_service.py"},
-			{"hexagonal/adapter.py", "infrastructure/{name}_repository.py"},
-			{"hexagonal/http.py", "routers/{name}.py"},
+			{"entity.py", "domain/{name}.py"},
+			{"port.py", "ports/{name}_repository.py"},
+			{"service.py", "application/{name}_service.py"},
+			{"adapter.py", "infrastructure/{name}_repository.py"},
+			{"http.py", "routers/{name}.py"},
 		},
 	},
 	"clean_arch": {
 		api:    "frameworks_and_drivers/web/api.py",
 		routes: "frameworks_and_drivers/web/{name}_routes.py",
 		files: []endpointFile{
-			{"clean_arch/entity.py", "domain/model/{name}.py"},
-			{"clean_arch/port.py", "application/port/outbound/{name}_repository.py"},
-			{"clean_arch/list.py", "application/use_cases/list_{name}.py"},
-			{"clean_arch/get.py", "application/use_cases/get_{name}.py"},
-			{"clean_arch/create.py", "application/use_cases/create_{name}.py"},
-			{"clean_arch/update.py", "application/use_cases/update_{name}.py"},
-			{"clean_arch/delete.py", "application/use_cases/delete_{name}.py"},
-			{"clean_arch/persistence.py", "interface_adapters/persistence/{name}_repository.py"},
-			{"clean_arch/presenter.py", "interface_adapters/presenters/{name}_presenter.py"},
-			{"clean_arch/controller.py", "interface_adapters/controllers/{name}_controller.py"},
-			{"clean_arch/routes.py", "frameworks_and_drivers/web/{name}_routes.py"},
+			{"entity.py", "domain/model/{name}.py"},
+			{"port.py", "application/port/outbound/{name}_repository.py"},
+			{"list.py", "application/use_cases/list_{name}.py"},
+			{"get.py", "application/use_cases/get_{name}.py"},
+			{"create.py", "application/use_cases/create_{name}.py"},
+			{"update.py", "application/use_cases/update_{name}.py"},
+			{"delete.py", "application/use_cases/delete_{name}.py"},
+			{"persistence.py", "interface_adapters/persistence/{name}_repository.py"},
+			{"presenter.py", "interface_adapters/presenters/{name}_presenter.py"},
+			{"controller.py", "interface_adapters/controllers/{name}_controller.py"},
+			{"routes.py", "frameworks_and_drivers/web/{name}_routes.py"},
 		},
 	},
 }
@@ -115,24 +104,45 @@ var pythonKeywords = []string{
 // Endpoint monta o Patch que cria um recurso CRUD (estrutura sem
 // implementação) e o registra no dispatch() da arquitetura.
 func Endpoint(root string, config project.Config, name string) (common.Patch, error) {
-	layout, ok := endpointLayouts[config.Architecture]
-	if !ok {
-		return common.Patch{}, fmt.Errorf("add endpoint não suportado para a arquitetura Python %s", config.Architecture)
-	}
-	if slices.Contains(pythonKeywords, name) {
-		return common.Patch{}, fmt.Errorf("%q é uma palavra reservada do Python", name)
+	layout, err := endpointLayoutFor(config.Architecture)
+	if err != nil {
+		return common.Patch{}, err
 	}
 	pkgDir, err := findPackage(root, layout.api)
 	if err != nil {
 		return common.Patch{}, err
 	}
+	return buildEndpointPatch(pkgDir, config.Architecture, layout, config, name)
+}
+
+func endpointPatchForPackage(pkgDir string, config project.Config, name string) (common.Patch, error) {
+	layout, err := endpointLayoutFor(config.Architecture)
+	if err != nil {
+		return common.Patch{}, err
+	}
+	return buildEndpointPatch(pkgDir, config.Architecture, layout, config, name)
+}
+
+func endpointLayoutFor(architecture string) (endpointLayout, error) {
+	layout, ok := endpointLayouts[architecture]
+	if !ok {
+		return endpointLayout{}, fmt.Errorf("add endpoint não suportado para a arquitetura Python %s", architecture)
+	}
+	return layout, nil
+}
+
+func buildEndpointPatch(pkgDir, architecture string, layout endpointLayout, config project.Config, name string) (common.Patch, error) {
+	if slices.Contains(pythonKeywords, name) {
+		return common.Patch{}, fmt.Errorf("%q é uma palavra reservada do Python", name)
+	}
 	expand := func(rel string) string { return strings.ReplaceAll(rel, nameToken, name) }
 
-	data := endpointData{
-		Name:    name,
-		Class:   className(name),
-		Route:   strings.ReplaceAll(name, "_", "-"),
-		Package: module(pkgDir),
+	data := templateData{
+		BaseData: common.NewBaseData(config),
+		Name:     name,
+		Class:    className(name),
+		Route:    strings.ReplaceAll(name, "_", "-"),
+		Package:  module(pkgDir),
 	}
 	if layout.handler != "" {
 		handler := module(path.Join(pkgDir, expand(layout.handler)))
@@ -140,15 +150,16 @@ func Endpoint(root string, config project.Config, name string) (common.Patch, er
 	}
 
 	var files []common.File
+	templateDir := path.Join("templates/python/architectures", architecture, "endpoint")
 	for _, file := range layout.files {
 		files = append(files, common.File{
-			TemplatePath: path.Join(endpointDir, file.template+".tmpl"),
+			TemplatePath: path.Join(templateDir, file.template+".tmpl"),
 			OutputPath:   path.Join(pkgDir, expand(file.output)),
 		})
 	}
 	if layout.handler != "" {
 		files = append(files, common.File{
-			TemplatePath: path.Join(endpointDir, sharedRoutes+".tmpl"),
+			TemplatePath: path.Join(templateDir, sharedRoutes+".tmpl"),
 			OutputPath:   path.Join(pkgDir, expand(layout.routes)),
 		})
 	}

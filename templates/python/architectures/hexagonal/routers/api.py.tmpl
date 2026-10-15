@@ -1,33 +1,6 @@
-from src.app.application.product_service import ProductService
-from src.app.domain.exceptions import InvalidProductError, ProductNotFoundError
-from src.app.infrastructure.in_memory_product_repository import InMemoryProductRepository
-from src.app.routers import product as product_router
-
-
-_repository = InMemoryProductRepository()
-_service = ProductService(_repository)
-_service.create("Headset 7.1 Surround", 320, 15)
-
+# crudding:imports
 
 def dispatch(method: str, path: str, body=None, query=None) -> dict:
     parts = [part for part in path.strip("/").split("/") if part]
-    try:
-        if method == "GET" and parts == ["health"]:
-            return {"status": 200, "body": {"status": "ok"}}
-        if method == "GET" and parts == ["products"]:
-            return {"status": 200, "body": product_router.list_products(_service)}
-        if method == "POST" and parts == ["products"]:
-            payload = body if isinstance(body, dict) else {}
-            product = product_router.create_product(_service, payload)
-            return {"status": 201, "body": product}
-        if len(parts) == 2 and parts[0] == "products" and method == "GET":
-            return {"status": 200, "body": product_router.get_product(_service, parts[1])}
-        if len(parts) == 3 and parts[0] == "products" and parts[2] == "discount" and method == "POST":
-            return {"status": 200, "body": product_router.apply_product_discount(_service, parts[1], body or {})}
-        return {"status": 404, "body": {"error": "route not found"}}
-    except InvalidProductError as error:
-        return {"status": 422, "body": {"error": str(error)}}
-    except ProductNotFoundError as error:
-        return {"status": 404, "body": {"error": str(error)}}
-    except (TypeError, ValueError) as error:
-        return {"status": 422, "body": {"error": str(error)}}
+    # crudding:routes
+    return {"status": 404, "body": {"error": "route not found"}}

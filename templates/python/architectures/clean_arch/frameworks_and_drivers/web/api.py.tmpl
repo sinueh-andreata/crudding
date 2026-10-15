@@ -1,28 +1,7 @@
-from src.app.bootstrap import build_order_controller
-from src.app.domain.exceptions import InvalidOrder, OrderNotFound, OrderStateError
-
-
-_controller = build_order_controller()
+# crudding:imports
 
 
 def dispatch(method: str, path: str, body=None, query=None) -> dict:
     parts = [part for part in path.strip("/").split("/") if part]
-    try:
-        if method == "GET" and parts == ["health"]:
-            return {"status": 200, "body": {"status": "ok"}}
-        if method == "GET" and parts == ["orders"]:
-            return {"status": 200, "body": _controller.list()}
-        if method == "POST" and parts == ["orders"]:
-            payload = body if isinstance(body, dict) else {}
-            return {"status": 201, "body": _controller.create(payload)}
-        if len(parts) == 2 and parts[0] == "orders" and method == "GET":
-            return {"status": 200, "body": _controller.get(parts[1])}
-        if len(parts) == 3 and parts[0] == "orders" and parts[2] == "pay" and method == "POST":
-            return {"status": 200, "body": _controller.pay(parts[1])}
-        return {"status": 404, "body": {"error": "route not found"}}
-    except InvalidOrder as error:
-        return {"status": 422, "body": {"error": str(error)}}
-    except OrderNotFound as error:
-        return {"status": 404, "body": {"error": str(error)}}
-    except OrderStateError as error:
-        return {"status": 409, "body": {"error": str(error)}}
+    # crudding:routes
+    return {"status": 404, "body": {"error": "route not found"}}
