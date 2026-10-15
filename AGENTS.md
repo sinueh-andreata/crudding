@@ -41,10 +41,14 @@ Cada arquitetura em Go possui seu próprio `README.md` detalhado explicando o fu
 crudding/
 ├── cmd/
 │   └── crudding/
-│       └── main.go              # Ponto de entrada do executável e orquestração do fluxo
+│       └── main.go              # Ponto de entrada mínimo (delega para internal/cli)
 │   └── genall/
 │       └── main.go              # Gera todas as combinações suportadas para validação
 ├── internal/
+│   ├── cli/
+│   │   ├── cli.go               # Registro de comandos, roteador Run e geração automática de --help
+│   │   ├── new.go               # Comando padrão de criação de projeto (runNew)
+│   │   └── add_endpoint.go      # Comando "crudding add endpoint" (runAddEndpoint)
 │   ├── generator/
 │   │   ├── common/
 │   │   │   ├── files.go         # Utilitários de escrita de arquivos e template parsing
@@ -86,7 +90,7 @@ crudding/
 
 ## 3. Fluxo de Execução
 
-1. **Seleção Interativa (`cmd/crudding/main.go` & `internal/tui/menu.go`)**:
+1. **Seleção Interativa (`internal/cli/new.go` & `internal/tui/menu.go`)**:
    - Pergunta a **Linguagem** (`python`, `go`, `node`).
    - Se `node`, pergunta o **Runtime** (`js`, `ts`).
    - Pergunta o **Framework** compatível com a linguagem selecionada.
