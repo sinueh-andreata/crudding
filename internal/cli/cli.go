@@ -11,21 +11,31 @@ import (
 // errCancelled sinaliza que o usuário saiu do menu; não é tratado como falha.
 var errCancelled = errors.New("cancelado pelo usuário")
 
-// Command descreve um comando ou subcomando disponível na CLI.
+var helpFlags = []string{"-h", "--help", "help"}
+
+// Command descreve um comando disponível na CLI.
 type Command struct {
-	Path    []string
+	Args    string
 	Summary string
 	Run     func() error
 }
 
+func (c Command) label() string {
+	return strings.TrimSpace("crudding " + c.Args)
+}
+
+func (c Command) matches(input string) bool {
+	return c.Args == input
+}
+
 var commands = []Command{
 	{
-		Path:    nil,
+		Args:    "",
 		Summary: "gera um novo projeto (menu interativo)",
 		Run:     runNew,
 	},
 	{
-		Path:    []string{"add", "endpoint"},
+		Args:    "add endpoint",
 		Summary: "adiciona um endpoint CRUD ao projeto atual (lê o project.crud)",
 		Run:     runAddEndpoint,
 	},
@@ -36,49 +46,48 @@ func Commands() []Command {
 	return slices.Clone(commands)
 }
 
-func (c Command) invocation() string {
-	if len(c.Path) == 0 {
-		return "crudding"
-	}
-	return "crudding " + strings.Join(c.Path, " ")
-}
-
 // Usage gera o texto de ajuda a partir dos comandos registrados.
 func Usage() string {
-	maxWidth := 0
-	for _, cmd := range commands {
-		if w := len(cmd.invocation()); w > maxWidth {
-			maxWidth = w
-		}
-	}
-
 	var b strings.Builder
 	b.WriteString("uso:\n")
 	for _, cmd := range commands {
-		fmt.Fprintf(&b, "  %-*s    %s\n", maxWidth, cmd.invocation(), cmd.Summary)
+		fmt.Fprintf(&b, "  %-21s    %s\n", cmd.label(), cmd.Summary)
 	}
 	return b.String()
 }
 
 // Run despacha os argumentos da linha de comando e devolve o código de saída.
 func Run(args []string, stdout, stderr io.Writer) int {
-	if len(args) == 1 && (args[0] == "-h" || args[0] == "--help" || args[0] == "help") {
+	input := strings.Join(args, " ")
+	if slices.Contains(helpFlags, input) {
 		fmt.Fprint(stdout, Usage())
 		return 0
 	}
 
-	index := slices.IndexFunc(commands, func(cmd Command) bool {
-		return slices.Equal(cmd.Path, args)
-	})
-	if index < 0 {
-		fmt.Fprintf(stderr, "crudding: comando desconhecido: %s\n%s", strings.Join(args, " "), Usage())
+	cmd, ok := findCommand(input)
+	if !ok {
+		fmt.Fprintf(stderr, "crudding: comando desconhecido: %s\n%s", input, Usage())
 		return 2
 	}
 
-	if err := commands[index].Run(); err != nil && !errors.Is(err, errCancelled) {
-		fmt.Fprintf(stderr, "crudding: %v\n", err)
-		return 1
-	}
-	return 0
+	return execute(cmd, stderr)
 }
 
+func findCommand(input string) (Command, bool) {
+	index := slices.IndexFunc(commands, func(cmd Command) bool {
+		return cmd.matches(input)
+	})
+	if index < 0 {
+		return Command{}, false
+	}
+	return commands[index], true
+}
+
+func execute(cmd Command, stderr io.Writer) int {
+	err := cmd.Run()
+	if err == nil || errors.Is(err, errCancelled) {
+		return 0
+	}
+	fmt.Fprintf(stderr, "crudding: %v\n", err)
+	return 1
+}

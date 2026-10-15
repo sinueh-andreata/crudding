@@ -45,11 +45,10 @@ func TestCLICommandsRegistry(t *testing.T) {
 	}
 	for _, cmd := range cmds {
 		if cmd.Summary == "" {
-			t.Errorf("command %v has empty Summary", cmd.Path)
+			t.Errorf("command %q has empty Summary", cmd.Args)
 		}
 		if cmd.Run == nil {
-			t.Errorf("command %v has nil Run", cmd.Path)
+			t.Errorf("command %q has nil Run", cmd.Args)
 		}
 	}
 }
-

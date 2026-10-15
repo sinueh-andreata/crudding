@@ -6,9 +6,20 @@ import (
 
 	"crudding"
 	"crudding/internal/generator"
+	"crudding/internal/generator/common"
 	"crudding/internal/manifest"
 	"crudding/internal/project"
 )
+
+func printEndpointSummary(name string, result common.Result) {
+	fmt.Printf("\nEndpoint %s criado.\n", name)
+	for _, file := range result.Created {
+		fmt.Printf("  criado     %s\n", file)
+	}
+	for _, file := range result.Modified {
+		fmt.Printf("  alterado   %s\n", file)
+	}
+}
 
 func runAddEndpoint() error {
 	workingDirectory, err := os.Getwd()
@@ -31,14 +42,6 @@ func runAddEndpoint() error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("\nEndpoint %s criado.\n", name)
-	for _, file := range result.Created {
-		fmt.Printf("  criado     %s\n", file)
-	}
-	for _, file := range result.Modified {
-		fmt.Printf("  alterado   %s\n", file)
-	}
+	printEndpointSummary(name, result)
 	return nil
 }
-
