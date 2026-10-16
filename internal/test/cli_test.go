@@ -473,5 +473,84 @@ func TestCLIInfo(t *testing.T) {
 	}
 }
 
+func TestCLIInfoDraw(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
 
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"new", "n:go-hex", "l:go", "f:gin", "a:hexagonal"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(new) exit code = %d, stderr = %q", code, stderr.String())
+	}
 
+	projectDir := filepath.Join(tmp, "go-hex")
+	chdirTemp(t, projectDir)
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"info", "draw"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(info draw) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	got := stdout.String()
+	for _, want := range []string{
+		"Projeto: go-hex (go + gin + hexagonal)",
+		"Arquitetura: hexagonal",
+		"Driving Adapter",
+		"HEXAGON CORE",
+		"Driven Adapter",
+		"internal/adapters/postgres",
+		"Endpoints: user",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("Run(info draw) stdout missing %q:\n%s", want, got)
+		}
+	}
+
+	// Test direct architecture argument for all architectures outside a project
+	chdirTemp(t, tmp)
+	for _, arch := range []string{"flat", "layered", "modular", "hexagonal", "clean_arch"} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run([]string{"info", "draw", arch}, &stdout, &stderr); code != 0 {
+			t.Fatalf("Run(info draw %q) exit code = %d, stderr = %q", arch, code, stderr.String())
+		}
+		if !strings.Contains(stdout.String(), "Arquitetura: "+arch) || !strings.Contains(stdout.String(), "┌") {
+			t.Fatalf("Run(info draw %q) unexpected stdout:\n%s", arch, stdout.String())
+		}
+	}
+
+	// Test key:value flags
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"info", "draw", "a:clean_arch", "l:python"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(info draw a:clean_arch l:python) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "frameworks_and_drivers/web") {
+		t.Fatalf("Run(info draw a:clean_arch l:python) missing python path:\n%s", stdout.String())
+	}
+
+	// Help flags
+	for _, arg := range []string{"-h", "--help", "help"} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run([]string{"info", "draw", arg}, &stdout, &stderr); code != 0 {
+			t.Fatalf("Run(info draw %q) exit code = %d, want 0", arg, code)
+		}
+		if !strings.Contains(stdout.String(), "crudding info draw") {
+			t.Fatalf("Run(info draw %q) missing usage:\n%s", arg, stdout.String())
+		}
+	}
+
+	// Validation errors
+	for _, args := range [][]string{
+		{"info", "draw"},
+		{"info", "draw", "invalid_arch"},
+		{"info", "draw", "a:hexagonal", "l:rust"},
+		{"info", "draw", "foo:bar"},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run(args, &stdout, &stderr); code != 1 {
+			t.Fatalf("Run(%v) exit code = %d, want 1", args, code)
+		}
+	}
+}

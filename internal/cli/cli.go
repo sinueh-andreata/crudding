@@ -46,6 +46,11 @@ var commands = []Command{
 		Run:     runInfo,
 	},
 	{
+		Args:    "info draw",
+		Summary: "desenha em ASCII a arquitetura do projeto atual",
+		Run:     runInfoDraw,
+	},
+	{
 		Args:    "add endpoint",
 		Summary: "adiciona um endpoint CRUD ao projeto atual (lê o project.crud)",
 		Run:     runAddEndpoint,
@@ -85,14 +90,24 @@ func Run(args []string, stdout, stderr io.Writer) int {
 }
 
 func findCommand(args []string) (Command, []string, bool) {
+	var (
+		bestCmd   Command
+		bestArgs  []string
+		bestParts int
+	)
 	for _, cmd := range commands {
 		if cmd.Args == "" {
 			continue
 		}
 		parts := strings.Fields(cmd.Args)
-		if len(args) >= len(parts) && slices.Equal(args[:len(parts)], parts) {
-			return cmd, args[len(parts):], true
+		if len(args) >= len(parts) && slices.Equal(args[:len(parts)], parts) && len(parts) > bestParts {
+			bestCmd = cmd
+			bestArgs = args[len(parts):]
+			bestParts = len(parts)
 		}
+	}
+	if bestParts > 0 {
+		return bestCmd, bestArgs, true
 	}
 	if len(args) == 0 {
 		for _, cmd := range commands {
