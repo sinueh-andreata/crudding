@@ -263,7 +263,7 @@ func drawFlatASCII(m manifest.Manifest) string {
 	entry, routes, handlers, services, models := "main.go", "routes.go", "*_handler.go", "*_service.go", "*_model / *_types"
 	switch m.Language {
 	case "python":
-		entry, routes, handlers, services, models = "src/<app>/main.py", "main.py", "*_controller.py", "*_service.py", "*_model.py"
+		entry, routes, handlers, services, models = "src/main.py", "main.py", "*_controller.py", "*_service.py", "*_model.py"
 	case "node":
 		ext := nodeExt(m.Runtime)
 		entry, routes, handlers, services, models = "src/main" + ext, "src/server" + ext, "src/tasks" + ext, "src/tasks" + ext, "src/tasks" + ext

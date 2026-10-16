@@ -2,6 +2,7 @@ package python
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"slices"
@@ -218,12 +219,15 @@ func buildEndpointPatch(pkgDir string, layout endpointLayout, config project.Con
 }
 
 func findPackage(root string) (string, error) {
+	if _, err := os.Stat(filepath.Join(root, "src", "main.py")); err == nil {
+		return "src", nil
+	}
 	matches, err := filepath.Glob(filepath.Join(root, "src", "*", "main.py"))
 	if err != nil {
 		return "", fmt.Errorf("procurar main.py: %w", err)
 	}
 	if len(matches) != 1 {
-		return "", fmt.Errorf("esperado exatamente um src/*/main.py, encontrados %d", len(matches))
+		return "", fmt.Errorf("esperado exatamente um src/*/main.py ou src/main.py, encontrados %d", len(matches))
 	}
 	rel, err := filepath.Rel(root, matches[0])
 	if err != nil {

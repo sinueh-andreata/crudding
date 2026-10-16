@@ -34,7 +34,7 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"pyproject.toml", "setup.py", "src/sample/resource_controller.py", "src/sample/resource_service.py", "src/sample/resource_model.py", "src/sample/main.py"},
+		"flat":       {"pyproject.toml", "setup.py", "src/resource_controller.py", "src/resource_service.py", "src/resource_model.py", "src/main.py"},
 		"layered":    {"src/app/main.py", "src/app/controllers/resource_controller.py", "src/app/services/resource_service.py", "src/app/models/resource.py"},
 		"modular":    {"src/app/main.py", "src/app/resource/controller.py", "src/app/resource/service.py", "src/app/resource/models.py"},
 		"hexagonal":  {"src/app/main.py", "src/app/routers/resource_controller.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/domain/resource.py"},
@@ -52,7 +52,7 @@ var forbiddenFiles = map[string]map[string][]string{
 		"clean_arch": {"routes", "pkg/validator", "migrations"},
 	},
 	"python": {
-		"flat":       {"src/sample/repository.py", "src/sample/resource_repository.py"},
+		"flat":       {"src/repository.py", "src/resource_repository.py"},
 		"layered":    {"src/app/repositories", "src/app/repository", "src/app/services/resource_repository.py", "src/app/router", "src/app/controllers/api.py"},
 		"modular":    {"src/app/resource/repository.py", "src/app/shared/api.py"},
 		"hexagonal":  {"src/app/routers/api.py"},
@@ -63,7 +63,7 @@ var forbiddenFiles = map[string]map[string][]string{
 // Trechos de código que comprovam que o scaffold genérico foi gerado.
 var codeChecks = map[string]map[string][2]string{
 	"python": {
-		"flat":       {"src/sample/resource_model.py", "class Resource"},
+		"flat":       {"src/resource_model.py", "class Resource"},
 		"layered":    {"src/app/services/resource_service.py", "def list_all"},
 		"modular":    {"src/app/resource/service.py", "def list_all"},
 		"hexagonal":  {"src/app/application/resource_service.py", "class ResourceService"},
@@ -205,7 +205,7 @@ func TestPythonGenericResourceDispatchers(t *testing.T) {
 		architecture string
 		module       string
 	}{
-		{"flat", "src.sample.main"},
+		{"flat", "src.main"},
 		{"layered", "src.app.main"},
 		{"modular", "src.app.main"},
 		{"hexagonal", "src.app.main"},

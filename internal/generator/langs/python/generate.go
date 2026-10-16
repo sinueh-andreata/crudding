@@ -32,83 +32,85 @@ type templateData struct {
 	Modules      map[string]string
 }
 
-// layout descreve a estrutura de diretórios e arquivos de uma arquitetura Python.
-// Salvo indicação contrária, os caminhos são relativos ao pacote base (src/app, ou src/<projeto> no flat).
-type layout struct {
-	entry        string        // recebe o main.py do framework (sempre "main.py")
-	packages     []string      // subpacotes que recebem __init__.py
-	rootPackages []string      // pacotes fora de src/ que recebem __init__.py
-	rootFiles    []common.File // arquivos gravados na raiz do projeto
+type architecture struct {
+	pkgDir string
+	main   string
 }
 
-var layouts = map[string]layout{
-	"flat": {
-		entry:        "main.py",
-		rootPackages: []string{"tests"},
-		rootFiles: []common.File{
-			{TemplatePath: "templates/python/base/flat/setup.py.tmpl", OutputPath: "setup.py"},
-		},
-	},
-	"layered": {
-		entry:    "main.py",
-		packages: []string{"controllers", "services", "models"},
-	},
-	"modular": {
-		entry:    "main.py",
-		packages: []string{"resource"},
-	},
-	"hexagonal": {
-		entry:    "main.py",
-		packages: []string{"domain", "application", "ports", "infrastructure", "routers"},
-	},
-	"clean_arch": {
-		entry: "main.py",
-		packages: []string{
-			"domain/model",
-			"application/use_cases",
-			"application/port/outbound",
-			"interface_adapters/controllers",
-			"interface_adapters/presenters",
-			"interface_adapters/persistence",
-			"frameworks_and_drivers/web",
-		},
-	},
+var architectures = map[string]architecture{
+	"flat":       {pkgDir: "src", main: "main.py"},
+	"layered":    {pkgDir: "src/app", main: "main.py"},
+	"modular":    {pkgDir: "src/app", main: "main.py"},
+	"hexagonal":  {pkgDir: "src/app", main: "main.py"},
+	"clean_arch": {pkgDir: "src/app", main: "main.py"},
 }
 
 // Plan monta o projeto Python. Framework e arquitetura já foram validados pelo
 // registry em internal/generator.
 func Plan(destination string, config project.Config) (common.Plan, error) {
-	layout, ok := layouts[config.Architecture]
+	arch, ok := architectures[config.Architecture]
 	if !ok {
 		return common.Plan{}, fmt.Errorf("arquitetura Python não suportada: %s", config.Architecture)
 	}
 
-	pkg := "app"
-	if config.Architecture == "flat" {
-		pkg = packageName(destination)
-	}
-	pkgDir := path.Join("src", pkg)
-	entryScript := path.Join(pkgDir, layout.entry)
+	pkgDir := arch.pkgDir
+	entryScript := path.Join(pkgDir, arch.main)
+
+	archDir := path.Join("templates/python/base", config.Architecture)
+	fwDir := path.Join("templates/python/frameworks", config.Framework)
+	commonDir := "templates/python/base/common"
 
 	files := []common.File{
-		{TemplatePath: path.Join("templates/python/base", config.Architecture, "README.md.tmpl"), OutputPath: "README.md"},
-		{TemplatePath: "templates/python/base/common/requirements.txt.tmpl", OutputPath: "requirements.txt"},
-		{TemplatePath: "templates/python/base/common/.gitignore.tmpl", OutputPath: ".gitignore"},
-		{TemplatePath: "templates/python/base/common/pyproject.toml.tmpl", OutputPath: "pyproject.toml"},
-		{TemplatePath: path.Join("templates/python/frameworks", config.Framework, "main.py.tmpl"), OutputPath: entryScript},
+		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
+		{TemplatePath: path.Join(commonDir, "requirements.txt.tmpl"), OutputPath: "requirements.txt"},
+		{TemplatePath: path.Join(commonDir, ".gitignore.tmpl"), OutputPath: ".gitignore"},
+		{TemplatePath: path.Join(commonDir, "pyproject.toml.tmpl"), OutputPath: "pyproject.toml"},
+		{TemplatePath: path.Join(fwDir, "main.py.tmpl"), OutputPath: entryScript},
 	}
-	files = append(files, layout.rootFiles...)
+
+	packages := []string{pkgDir}
+
+	switch config.Architecture {
+	case "flat":
+		files = append(files,
+			common.File{TemplatePath: path.Join(archDir, "setup.py.tmpl"), OutputPath: "setup.py"},
+		)
+		packages = append(packages, "tests")
+	case "layered":
+		packages = append(packages,
+			path.Join(pkgDir, "controllers"),
+			path.Join(pkgDir, "services"),
+			path.Join(pkgDir, "models"),
+		)
+	case "modular":
+		packages = append(packages,
+			path.Join(pkgDir, "resource"),
+		)
+	case "hexagonal":
+		packages = append(packages,
+			path.Join(pkgDir, "domain"),
+			path.Join(pkgDir, "application"),
+			path.Join(pkgDir, "ports"),
+			path.Join(pkgDir, "infrastructure"),
+			path.Join(pkgDir, "routers"),
+		)
+	case "clean_arch":
+		packages = append(packages,
+			path.Join(pkgDir, "domain/model"),
+			path.Join(pkgDir, "application/use_cases"),
+			path.Join(pkgDir, "application/port/outbound"),
+			path.Join(pkgDir, "interface_adapters/controllers"),
+			path.Join(pkgDir, "interface_adapters/presenters"),
+			path.Join(pkgDir, "interface_adapters/persistence"),
+			path.Join(pkgDir, "frameworks_and_drivers/web"),
+		)
+	}
 
 	seedPatch, err := endpointPatchForPackage(pkgDir, config, "resource")
 	if err != nil {
 		return common.Plan{}, err
 	}
 	files = append(files, seedPatch.Files...)
-
-	packages := append([]string{pkgDir}, layout.rootPackages...)
-	for _, sub := range layout.packages {
-		packages = append(packages, path.Join(pkgDir, sub))
-	}
 	packages = append(packages, seedPatch.Packages...)
 
 	data := seedPatch.Data.(templateData)
@@ -124,18 +126,6 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 		Endpoints: []string{"resource"},
 		Prepare:   func(root string) error { return common.CreatePackages(root, packages, nil) },
 	}, nil
-}
-
-// packageName deriva um identificador Python válido a partir do nome da pasta.
-func packageName(destination string) string {
-	name := strings.ReplaceAll(project.Slug(filepath.Base(destination)), "-", "_")
-	if name == "" {
-		return "app"
-	}
-	if name[0] >= '0' && name[0] <= '9' {
-		return "project_" + name
-	}
-	return name
 }
 
 func module(file string) string {

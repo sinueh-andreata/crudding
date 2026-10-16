@@ -14,7 +14,7 @@ import (
 )
 
 var pythonEntryScripts = map[string]string{
-	"flat":       "src/sample/main.py",
+	"flat":       "src/main.py",
 	"layered":    "src/app/main.py",
 	"modular":    "src/app/main.py",
 	"hexagonal":  "src/app/main.py",
