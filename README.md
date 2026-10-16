@@ -2,6 +2,8 @@
 
 Interactive CLI written in Go 1.27 that generates projects from templates embedded in the executable.
 
+![App Screenshot](docs/assets/panel.svg)
+
 ## Install the `crudding` Command
 
 ```sh
