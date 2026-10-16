@@ -10,18 +10,18 @@ import (
 	"crudding/internal/generator"
 )
 
-// ListUsage gera o texto de ajuda do comando "crudding list".
-func ListUsage() string {
+// StacksUsage gera o texto de ajuda do comando "crudding stacks".
+func StacksUsage() string {
 	var b strings.Builder
 	b.WriteString("como funciona:\n")
 	b.WriteString("  Exibe em formato de árvore todas as combinações suportadas de linguagens,\n")
 	b.WriteString("  runtimes, frameworks e arquiteturas registradas no crudding.\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding list [linguagem | lang:<linguagem> | l:<linguagem>]\n\n")
+	b.WriteString("  crudding stacks [linguagem | lang:<linguagem> | l:<linguagem>]\n\n")
 	b.WriteString("exemplos:\n")
-	b.WriteString("  crudding list\n")
-	b.WriteString("  crudding list go\n")
-	b.WriteString("  crudding list l:node\n")
+	b.WriteString("  crudding stacks\n")
+	b.WriteString("  crudding stacks go\n")
+	b.WriteString("  crudding stacks l:node\n")
 	return b.String()
 }
 
@@ -51,12 +51,12 @@ func formatLanguageTree(lang generator.Language) string {
 	return b.String()
 }
 
-func runList(args []string, stdout, _ io.Writer) error {
-	fs := flag.NewFlagSet("crudding list", flag.ContinueOnError)
+func runStacks(args []string, stdout, _ io.Writer) error {
+	fs := flag.NewFlagSet("crudding stacks", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprint(stdout, ListUsage())
+			fmt.Fprint(stdout, StacksUsage())
 			return nil
 		}
 		return err
@@ -64,7 +64,7 @@ func runList(args []string, stdout, _ io.Writer) error {
 
 	tokens := fs.Args()
 	if len(tokens) == 1 && tokens[0] == "help" {
-		fmt.Fprint(stdout, ListUsage())
+		fmt.Fprint(stdout, StacksUsage())
 		return nil
 	}
 	if len(tokens) > 1 {

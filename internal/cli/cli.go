@@ -36,9 +36,9 @@ var commands = []Command{
 		Run:     runNew,
 	},
 	{
-		Args:    "list",
+		Args:    "stacks",
 		Summary: "lista as linguagens, runtimes, frameworks e arquiteturas suportadas",
-		Run:     runList,
+		Run:     runStacks,
 	},
 	{
 		Args:    "info",
