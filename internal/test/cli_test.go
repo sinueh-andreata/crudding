@@ -317,3 +317,71 @@ func TestCLIAddEndpointNonInteractive(t *testing.T) {
 		t.Fatalf("stderr = %q, want invalid endpoint error", stderr.String())
 	}
 }
+
+func TestCLIList(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := cli.Run([]string{"list"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("Run(list) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("Run(list) unexpected stderr = %q", stderr.String())
+	}
+
+	got := stdout.String()
+	for _, want := range []string{
+		"python (Python)",
+		"├── frameworks: raw, fastapi, django, flask",
+		"└── architectures: flat, layered, modular, hexagonal, clean_arch",
+		"go (Go)",
+		"├── frameworks: raw, gin, fiber, chi",
+		"node (Node)",
+		"├── runtimes: js, ts",
+		"├── frameworks: raw, express, nest, fastify",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("Run(list) stdout missing %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestCLIListFilterAndHelp(t *testing.T) {
+	for _, arg := range []string{"go", "lang:go", "l:go"} {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run([]string{"list", arg}, &stdout, &stderr)
+		if code != 0 {
+			t.Fatalf("Run(list %q) exit code = %d, stderr = %q", arg, code, stderr.String())
+		}
+		got := stdout.String()
+		if !strings.Contains(got, "go (Go)") || strings.Contains(got, "python (Python)") {
+			t.Fatalf("Run(list %q) unexpected stdout:\n%s", arg, got)
+		}
+	}
+
+	for _, arg := range []string{"-h", "--help", "help"} {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run([]string{"list", arg}, &stdout, &stderr)
+		if code != 0 {
+			t.Fatalf("Run(list %q) exit code = %d, want 0", arg, code)
+		}
+		if !strings.Contains(stdout.String(), "crudding list") {
+			t.Fatalf("Run(list %q) stdout = %q, missing usage", arg, stdout.String())
+		}
+	}
+
+	for _, args := range [][]string{
+		{"list", "rust"},
+		{"list", "f:gin"},
+		{"list", "go", "node"},
+	} {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run(args, &stdout, &stderr)
+		if code != 1 {
+			t.Fatalf("Run(%v) exit code = %d, want 1", args, code)
+		}
+		if stderr.Len() == 0 {
+			t.Fatalf("Run(%v) expected error message on stderr", args)
+		}
+	}
+}
+

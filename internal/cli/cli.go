@@ -36,6 +36,11 @@ var commands = []Command{
 		Run:     runNew,
 	},
 	{
+		Args:    "list",
+		Summary: "lista as linguagens, runtimes, frameworks e arquiteturas suportadas",
+		Run:     runList,
+	},
+	{
 		Args:    "add endpoint",
 		Summary: "adiciona um endpoint CRUD ao projeto atual (lê o project.crud)",
 		Run:     runAddEndpoint,
