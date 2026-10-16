@@ -109,5 +109,5 @@ func Plan(_ string, config project.Config) (common.Plan, error) {
 		VarName:  "user",
 	}
 
-	return common.Plan{Files: files, Data: data}, nil
+	return common.Plan{Files: files, Data: data, Endpoints: []string{"user"}}, nil
 }

@@ -1,5 +1,6 @@
 // Package manifest lê e grava o project.crud, que registra na raiz de cada
-// projeto gerado a combinação usada (linguagem, framework, arquitetura...).
+// projeto gerado a combinação usada (linguagem, framework, arquitetura...) e
+// os endpoints registrados.
 package manifest
 
 import (
@@ -9,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"crudding/internal/project"
 )
@@ -19,15 +21,20 @@ const (
 )
 
 type Manifest struct {
-	Version      int    `json:"version"`
-	Name         string `json:"name"`
-	Language     string `json:"language"`
-	Runtime      string `json:"runtime,omitempty"`
-	Framework    string `json:"framework"`
-	Architecture string `json:"architecture"`
+	Version      int      `json:"version"`
+	Name         string   `json:"name"`
+	Language     string   `json:"language"`
+	Runtime      string   `json:"runtime,omitempty"`
+	Framework    string   `json:"framework"`
+	Architecture string   `json:"architecture"`
+	Endpoints    []string `json:"endpoints"`
 }
 
-func New(config project.Config) Manifest {
+func New(config project.Config, endpoints ...string) Manifest {
+	eps := slices.Clone(endpoints)
+	if eps == nil {
+		eps = []string{}
+	}
 	return Manifest{
 		Version:      Version,
 		Name:         config.ProjectName,
@@ -35,6 +42,13 @@ func New(config project.Config) Manifest {
 		Runtime:      config.Runtime,
 		Framework:    config.Framework,
 		Architecture: config.Architecture,
+		Endpoints:    eps,
+	}
+}
+
+func (m *Manifest) AddEndpoint(name string) {
+	if !slices.Contains(m.Endpoints, name) {
+		m.Endpoints = append(m.Endpoints, name)
 	}
 }
 
@@ -58,6 +72,9 @@ func (m Manifest) Stack() string {
 }
 
 func Write(root string, m Manifest) error {
+	if m.Endpoints == nil {
+		m.Endpoints = []string{}
+	}
 	content, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return fmt.Errorf("codificar %s: %w", FileName, err)
@@ -79,6 +96,9 @@ func Read(path string) (Manifest, error) {
 	}
 	if m.Version != Version {
 		return Manifest{}, fmt.Errorf("%s: versão %d não suportada (esperado %d)", path, m.Version, Version)
+	}
+	if m.Endpoints == nil {
+		m.Endpoints = []string{}
 	}
 	return m, nil
 }

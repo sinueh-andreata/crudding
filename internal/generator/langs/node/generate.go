@@ -24,20 +24,23 @@ type templateData struct {
 // layout descreve uma arquitetura. Os caminhos não têm extensão: cada arquivo
 // vem de templates/node/architectures/<arquitetura>/<arquivo>.<runtime>.tmpl.
 type layout struct {
-	entry   string
-	httpDir string
-	files   []string
+	entry     string
+	httpDir   string
+	endpoints []string
+	files     []string
 }
 
 var layouts = map[string]layout{
 	"flat": {
-		entry:   "src/main",
-		httpDir: "src",
-		files:   []string{"src/main", "src/tasks", "src/tasks.test"},
+		entry:     "src/main",
+		httpDir:   "src",
+		endpoints: []string{"tasks"},
+		files:     []string{"src/main", "src/tasks", "src/tasks.test"},
 	},
 	"layered": {
-		entry:   "src/main",
-		httpDir: "src/http",
+		entry:     "src/main",
+		httpDir:   "src/http",
+		endpoints: []string{"user", "order"},
 		files: []string{
 			"src/main",
 			"src/routes/index",
@@ -54,8 +57,9 @@ var layouts = map[string]layout{
 		},
 	},
 	"modular": {
-		entry:   "src/main",
-		httpDir: "src/shared/http",
+		entry:     "src/main",
+		httpDir:   "src/shared/http",
+		endpoints: []string{"catalog", "orders"},
 		files: []string{
 			"src/main",
 			"src/modules/catalog/index",
@@ -74,8 +78,9 @@ var layouts = map[string]layout{
 		},
 	},
 	"hexagonal": {
-		entry:   "src/entrypoints/main",
-		httpDir: "src/adapters/http",
+		entry:     "src/entrypoints/main",
+		httpDir:   "src/adapters/http",
+		endpoints: []string{"product"},
 		files: []string{
 			"src/entrypoints/main",
 			"src/domain/errors",
@@ -89,8 +94,9 @@ var layouts = map[string]layout{
 		},
 	},
 	"clean_arch": {
-		entry:   "src/frameworks/main",
-		httpDir: "src/frameworks/http",
+		entry:     "src/frameworks/main",
+		httpDir:   "src/frameworks/http",
+		endpoints: []string{"order"},
 		files: []string{
 			"src/frameworks/main",
 			"src/frameworks/http/routes",
@@ -143,5 +149,6 @@ func Plan(_ string, config project.Config) (common.Plan, error) {
 		Runtime:     config.Runtime,
 		EntryScript: layout.entry + ext,
 	}
-	return common.Plan{Files: files, Data: data}, nil
+	return common.Plan{Files: files, Data: data, Endpoints: layout.endpoints}, nil
 }
+

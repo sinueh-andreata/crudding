@@ -385,3 +385,93 @@ func TestCLIListFilterAndHelp(t *testing.T) {
 	}
 }
 
+func TestCLIInfo(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"new", "n:go-api", "l:go", "f:gin", "a:hexagonal"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(new go) exit code = %d, stderr = %q", code, stderr.String())
+	}
+
+	goDir := filepath.Join(tmp, "go-api")
+	chdirTemp(t, goDir)
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"add", "endpoint", "product"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(add endpoint) exit code = %d, stderr = %q", code, stderr.String())
+	}
+
+	_, m, err := manifest.Find(goDir)
+	if err != nil {
+		t.Fatalf("manifest.Find() error = %v", err)
+	}
+	if len(m.Endpoints) != 2 || m.Endpoints[0] != "user" || m.Endpoints[1] != "product" {
+		t.Fatalf("manifest.Endpoints = %v, want [user product]", m.Endpoints)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code := cli.Run([]string{"info"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("Run(info) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	got := stdout.String()
+	for _, want := range []string{
+		"Projeto: go-api",
+		"Stack: go + gin + hexagonal",
+		"Linguagem: go",
+		"Framework: gin",
+		"Arquitetura: hexagonal",
+		"Endpoints (2):",
+		"  - user",
+		"  - product",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("Run(info) stdout missing %q:\n%s", want, got)
+		}
+	}
+
+	// Projeto Node (modular)
+	chdirTemp(t, tmp)
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"new", "n:node-api", "l:node", "r:ts", "f:express", "a:modular"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(new node) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	chdirTemp(t, filepath.Join(tmp, "node-api"))
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"info"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(info node) exit code = %d, stderr = %q", code, stderr.String())
+	}
+	gotNode := stdout.String()
+	for _, want := range []string{
+		"Projeto: node-api",
+		"Stack: node/ts + express + modular",
+		"Linguagem/motor: node/ts",
+		"Endpoints (2):",
+		"  - catalog",
+		"  - orders",
+	} {
+		if !strings.Contains(gotNode, want) {
+			t.Fatalf("Run(info node) stdout missing %q:\n%s", want, gotNode)
+		}
+	}
+
+	for _, arg := range []string{"-h", "--help", "help"} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run([]string{"info", arg}, &stdout, &stderr); code != 0 {
+			t.Fatalf("Run(info %q) exit code = %d, want 0", arg, code)
+		}
+		if !strings.Contains(stdout.String(), "crudding info") {
+			t.Fatalf("Run(info %q) missing usage:\n%s", arg, stdout.String())
+		}
+	}
+}
+
+
+

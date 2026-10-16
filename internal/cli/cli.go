@@ -41,6 +41,11 @@ var commands = []Command{
 		Run:     runList,
 	},
 	{
+		Args:    "info",
+		Summary: "exibe a stack do projeto atual e os endpoints registrados no project.crud",
+		Run:     runInfo,
+	},
+	{
 		Args:    "add endpoint",
 		Summary: "adiciona um endpoint CRUD ao projeto atual (lê o project.crud)",
 		Run:     runAddEndpoint,

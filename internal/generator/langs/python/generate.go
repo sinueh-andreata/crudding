@@ -118,10 +118,11 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	data.ProjectName = strings.ReplaceAll(filepath.Base(destination), "_", "-")
 
 	return common.Plan{
-		Files:   files,
-		Data:    data,
-		Inserts: seedPatch.Inserts,
-		Prepare: func(root string) error { return common.CreatePackages(root, packages, nil) },
+		Files:     files,
+		Data:      data,
+		Inserts:   seedPatch.Inserts,
+		Endpoints: []string{"resource"},
+		Prepare:   func(root string) error { return common.CreatePackages(root, packages, nil) },
 	}, nil
 }
 

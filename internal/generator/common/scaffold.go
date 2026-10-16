@@ -12,9 +12,10 @@ import (
 // apenas montam o Plan; criar o diretório, renderizar e limpar em caso de
 // falha fica a cargo de Scaffold.
 type Plan struct {
-	Files   []File
-	Data    any
-	Inserts []Insert
+	Files     []File
+	Data      any
+	Inserts   []Insert
+	Endpoints []string
 	// Prepare roda depois da criação do diretório raiz e antes da escrita dos
 	// arquivos (ex.: criar pacotes Python com __init__.py). Opcional.
 	Prepare func(root string) error
@@ -39,7 +40,7 @@ func Scaffold(destination string, config project.Config, templates fs.FS, plan P
 			return err
 		}
 	}
-	if err = manifest.Write(root, manifest.New(config)); err != nil {
+	if err = manifest.Write(root, manifest.New(config, plan.Endpoints...)); err != nil {
 		return err
 	}
 	if err = WriteFiles(root, templates, plan.Data, plan.Files); err != nil {

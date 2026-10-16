@@ -343,9 +343,7 @@ import (
 	"testing"
 )
 func TestDemoAPI(t *testing.T) {
-	svc := NewUserService()
-	handler := NewUserHandler(svc)
-	router := SetupRouter(handler)
+	router := SetupRouter()
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
@@ -364,14 +362,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"example.com/sample/internal/handlers"
 	"example.com/sample/internal/routes"
-	"example.com/sample/internal/service"
 )
 func TestDemoAPI(t *testing.T) {
-	svc := service.NewUserService()
-	handler := handlers.NewUserHandler(svc)
-	router := routes.SetupRouter(handler)
+	router := routes.SetupRouter()
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
@@ -391,12 +385,9 @@ import (
 	"strings"
 	"testing"
 	"example.com/sample/internal/routes"
-	"example.com/sample/internal/user"
 )
 func TestDemoAPI(t *testing.T) {
-	svc := user.NewService()
-	handler := user.NewHandler(svc)
-	router := routes.SetupRouter(handler)
+	router := routes.SetupRouter()
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
@@ -415,16 +406,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"example.com/sample/internal/adapters/postgres"
-	"example.com/sample/internal/application"
-	"example.com/sample/internal/handlers"
 	"example.com/sample/internal/routes"
 )
 func TestDemoAPI(t *testing.T) {
-	repo := postgres.NewUserRepository()
-	svc := application.NewUserService(repo)
-	handler := handlers.NewUserHandler(svc)
-	router := routes.SetupRouter(handler)
+	router := routes.SetupRouter()
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
@@ -443,16 +428,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"example.com/sample/internal/application"
-	"example.com/sample/internal/handlers"
-	"example.com/sample/internal/infrastructure/persistence"
 	"example.com/sample/internal/routes"
 )
 func TestDemoAPI(t *testing.T) {
-	repo := persistence.NewUserRepository()
-	svc := application.NewUserService(repo)
-	handler := handlers.NewUserHandler(svc)
-	router := routes.SetupRouter(handler)
+	router := routes.SetupRouter()
 	request := func(method, path, body string) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(method, path, strings.NewReader(body)))
@@ -466,3 +445,4 @@ func TestDemoAPI(t *testing.T) {
 	if get.Code != http.StatusOK || !strings.Contains(get.Body.String(), ` + "`" + `"name":"Alice"` + "`" + `) { t.Fatalf("get = %d %s", get.Code, get.Body.String()) }
 }`,
 }
+

@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 
 	"crudding/internal/generator/common"
 	"crudding/internal/manifest"
@@ -16,7 +17,8 @@ func CheckEndpointSupport(m manifest.Manifest) error {
 }
 
 // AddEndpoint cria um novo recurso CRUD no projeto em root, de acordo com a
-// combinação registrada no project.crud, e o registra no roteamento existente.
+// combinação registrada no project.crud, registra o endpoint no roteamento
+// existente e atualiza o array de endpoints em project.crud.
 func AddEndpoint(root string, m manifest.Manifest, name string, templates fs.FS) (common.Result, error) {
 	language, err := endpointLanguage(m)
 	if err != nil {
@@ -26,7 +28,22 @@ func AddEndpoint(root string, m manifest.Manifest, name string, templates fs.FS)
 	if err != nil {
 		return common.Result{}, err
 	}
-	return common.Apply(root, templates, patch)
+	result, err := common.Apply(root, templates, patch)
+	if err != nil {
+		return common.Result{}, err
+	}
+
+	updated := m
+	if onDisk, readErr := manifest.Read(filepath.Join(root, manifest.FileName)); readErr == nil {
+		for _, ep := range onDisk.Endpoints {
+			updated.AddEndpoint(ep)
+		}
+	}
+	updated.AddEndpoint(name)
+	if err := manifest.Write(root, updated); err != nil {
+		return common.Result{}, err
+	}
+	return result, nil
 }
 
 func endpointLanguage(m manifest.Manifest) (Language, error) {
