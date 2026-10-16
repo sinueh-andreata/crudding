@@ -56,6 +56,11 @@ var commands = []Command{
 		Run:     runAddEndpoint,
 	},
 	{
+		Args:    "add db",
+		Summary: "adiciona conexão com banco de dados ao projeto atual (lê o project.crud)",
+		Run:     runAddDB,
+	},
+	{
 		Args:    "remove endpoint",
 		Summary: "remove um endpoint CRUD do projeto atual (lê o project.crud)",
 		Run:     runRemoveEndpoint,

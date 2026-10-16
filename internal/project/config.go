@@ -6,4 +6,5 @@ type Config struct {
 	Runtime      string
 	Framework    string
 	Architecture string
+	Database     string
 }

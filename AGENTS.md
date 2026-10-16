@@ -49,6 +49,7 @@ crudding/
 │   │   ├── cli.go               # Registro de comandos, roteador Run e geração automática de --help
 │   │   ├── new.go               # Comando padrão de criação de projeto (runNew)
 │   │   ├── add_endpoint.go      # Comando "crudding add endpoint" (runAddEndpoint)
+│   │   ├── add_db.go            # Comando "crudding add db" (runAddDB)
 │   │   └── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
 │   ├── generator/
 │   │   ├── common/
@@ -64,6 +65,7 @@ crudding/
 │   │   │   └── python/
 │   │   │       ├── generate.go   # Gerador específico para projetos Python
 │   │   │       └── endpoint.go   # Layouts de "add endpoint" e "remove endpoint" por arquitetura Python
+│   │   ├── database.go          # Dispatcher de "crudding add db"
 │   │   ├── generator.go         # Dispatcher central do gerador
 │   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint" e "crudding remove endpoint"
 │   ├── manifest/
@@ -76,11 +78,8 @@ crudding/
 │   └── tui/
 │       └── menu.go              # Menu Bubble Tea para seleção interativa
 ├── templates/                   # Arquivos de template (.tmpl) para cada stack
-│   ├── go/
-│   │   ├── base/                # common (.gitignore, go.mod, go.sum) e arquiteturas (flat, layered, modular, hexagonal, clean_arch)
-│   │   └── frameworks/          # entrypoints por framework (chi, fiber, gin, raw)
-│   ├── node/
-│   └── python/
+│   ├── databases/               # Templates de banco (postgres, mysql, mongo): compose, env, migrations, conexão
+│   └── langs/                   # Templates de linguagens (go, node, python)
 ├── assets.go                    # Declaração do embed.FS para a pasta templates/
 ├── go.mod                       # Definição de módulo e dependências
 ├── go.sum
@@ -97,12 +96,15 @@ crudding/
    - Se `node`, pergunta o **Runtime** (`js`, `ts`).
    - Pergunta o **Framework** compatível com a linguagem selecionada.
    - Pergunta a **Arquitetura** (com opções dinâmicas dependendo da linguagem selecionada via `architectureOptionsFor`).
+   - Se `go` ou `python`, pergunta o **Banco de Dados** (`nenhum`, `postgres`, `mysql`, `mongo`).
    - Lê e valida o **Nome do Projeto** via prompt de texto.
 2. **Validação de Segurança (`internal/project/name.go`)**:
    - Rejeita caracteres inválidos e tentativas de path traversal (`..`, barras, etc.).
    - Garante que diretórios existentes nunca sejam sobrescritos (`internal/generator/common/files.go`).
 3. **Geração dos Arquivos (`internal/generator/` e `internal/generator/langs/`)**:
    - Define a estrutura de diretórios baseado no layout da arquitetura escolhida.
+   - Em Go e Python, inclui o diretório `config/` com `config.go` ou `config.py` para carregar configurações gerais e clientes de banco.
+   - Se um banco de dados for selecionado na criação, gera a infraestrutura (`docker-compose.yml`, `.env.example`, `migrations/`), ativa os blocos correspondentes no `config.*` via condicionais de template e adiciona as dependências do driver (`go.mod` ou `requirements.txt`).
    - Processa os templates embutidos utilizando `text/template` e grava no diretório de destino.
    - Em caso de falha no meio do processo, o diretório gerado é limpo automaticamente (`defer os.RemoveAll`).
 
@@ -124,6 +126,18 @@ crudding/
 4. Verifica se o endpoint está registrado no `project.crud`.
 5. A função `removePlan` da linguagem monta um `common.RemovalPlan`: arquivos a deletar, diretórios que devem ser excluídos se ficarem vazios e linhas a remover dos arquivos de rotas/imports.
 6. `common.Remove` remove os arquivos, limpa as linhas das rotas, limpa pastas vazias e atualiza o manifesto `project.crud` com rollback caso haja erro na gravação.
+
+### `crudding add db <postgres|mysql|mongo>`
+
+1. `manifest.Find` localiza a raiz do projeto e lê o `project.crud`.
+2. Valida o banco de dados informado (`postgres`, `mysql`, `mongo`).
+3. `generator.AddDatabase` monta um `common.Patch`:
+   - `docker-compose.yml` (se não existir cria, se já existir insere o novo serviço/volume);
+   - `.env.example` com as variáveis de conexão;
+   - pasta `migrations/` com a migração inicial (`.up.sql`/`.down.sql` para SQL e `.js` para Mongo);
+   - em Go e Python, insere as configurações e funções de conexão dentro do `config/config.go` ou `config/config.py` existente nos markers `crudding:db-*`, suportando múltiplos bancos no mesmo arquivo; em Node grava o arquivo de conexão sob `src/database.{js,ts}`.
+4. `common.Apply` valida a ausência de conflitos e grava os arquivos.
+5. Atualiza dependências (`go.mod`, `requirements.txt` ou `package.json`) com os drivers do banco e atualiza o manifesto `project.crud` com o banco adicionado.
 
 **Para suportar uma nova linguagem**: implemente `endpoint` e `removePlan` em `internal/generator/langs/<lang>/endpoint.go`, registre-os em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates correspondentes. Os markers não podem ser removidos dos templates existentes.
 

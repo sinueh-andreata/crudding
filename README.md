@@ -52,6 +52,20 @@ crudding remove endpoint <name>
 
 Removes the generated files of the specified entity, cleans up the corresponding route and import lines from the router dispatcher, and updates `project.crud`. Supported for Python and Go.
 
+## Add Database
+
+```sh
+cd my-api
+crudding add db <postgres|mysql|mongo>
+```
+
+Adds database connection setup to your project:
+- `docker-compose.yml` for containerized databases (`postgres`, `mysql`, and `mongo`);
+- `.env.example` with connection environment variables;
+- `migrations/` directory with initial migration scripts;
+- Language-specific driver connection helper (`db.go` for Go, `database.py` for Python, `database.js`/`database.ts` for Node);
+- Updates `requirements.txt` (Python) or `package.json` (Node) with the required database driver dependencies.
+
 ## Project Structure
 
 ```text

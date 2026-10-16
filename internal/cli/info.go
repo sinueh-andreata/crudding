@@ -51,6 +51,9 @@ func printInfoReport(stdout io.Writer, root string, m manifest.Manifest) {
 	fmt.Fprintln(stdout, formatLanguageLine(cfg))
 	fmt.Fprintf(stdout, "Framework: %s\n", cfg.Framework)
 	fmt.Fprintf(stdout, "Arquitetura: %s\n", cfg.Architecture)
+	if m.Database != "" {
+		fmt.Fprintf(stdout, "Banco de dados: %s\n", m.Database)
+	}
 
 	fmt.Fprintf(stdout, "\nEndpoints (%d):\n", len(m.Endpoints))
 	if len(m.Endpoints) == 0 {

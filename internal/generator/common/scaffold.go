@@ -57,14 +57,26 @@ func Scaffold(destination string, config project.Config, templates fs.FS, plan P
 // continuem acessíveis diretamente.
 type BaseData struct {
 	ProjectName  string
+	ProjectSlug  string
 	Framework    string
 	Architecture string
+	Database     string
 }
 
 func NewBaseData(config project.Config) BaseData {
 	return BaseData{
 		ProjectName:  config.ProjectName,
+		ProjectSlug:  project.Slug(config.ProjectName),
 		Framework:    config.Framework,
 		Architecture: config.Architecture,
+		Database:     config.Database,
 	}
+}
+
+func (b BaseData) HasDatabase(name string) bool {
+	return b.Database == name
+}
+
+func (b BaseData) HasAnyDatabase() bool {
+	return b.Database != ""
 }

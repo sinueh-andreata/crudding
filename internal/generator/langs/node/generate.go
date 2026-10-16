@@ -126,20 +126,20 @@ func Plan(_ string, config project.Config) (common.Plan, error) {
 	ext := "." + config.Runtime
 
 	files := []common.File{
-		{TemplatePath: "templates/node/base/package.json.tmpl", OutputPath: "package.json"},
-		{TemplatePath: "templates/node/base/README.md.tmpl", OutputPath: "README.md"},
-		{TemplatePath: "templates/node/base/.gitignore.tmpl", OutputPath: ".gitignore"},
-		{TemplatePath: path.Join("templates/node/frameworks", config.Framework, "server"+ext+".tmpl"), OutputPath: path.Join(layout.httpDir, "server"+ext)},
+		{TemplatePath: "templates/langs/node/base/package.json.tmpl", OutputPath: "package.json"},
+		{TemplatePath: "templates/langs/node/base/README.md.tmpl", OutputPath: "README.md"},
+		{TemplatePath: "templates/langs/node/base/.gitignore.tmpl", OutputPath: ".gitignore"},
+		{TemplatePath: path.Join("templates/langs/node/frameworks", config.Framework, "server"+ext+".tmpl"), OutputPath: path.Join(layout.httpDir, "server"+ext)},
 	}
 	sources := make([]string, len(layout.files))
 	for index, file := range layout.files {
 		sources[index] = file + ext
 	}
-	files = append(files, common.FilesFrom(path.Join("templates/node/architectures", config.Architecture), "", sources...)...)
+	files = append(files, common.FilesFrom(path.Join("templates/langs/node/architectures", config.Architecture), "", sources...)...)
 	if config.Runtime == "ts" {
 		files = append(files,
-			common.File{TemplatePath: "templates/node/base/tsconfig.json.tmpl", OutputPath: "tsconfig.json"},
-			common.File{TemplatePath: "templates/node/base/http-types.ts.tmpl", OutputPath: path.Join(layout.httpDir, "types.ts")},
+			common.File{TemplatePath: "templates/langs/node/base/tsconfig.json.tmpl", OutputPath: "tsconfig.json"},
+			common.File{TemplatePath: "templates/langs/node/base/http-types.ts.tmpl", OutputPath: path.Join(layout.httpDir, "types.ts")},
 		)
 	}
 

@@ -39,16 +39,26 @@ func Plan(_ string, config project.Config) (common.Plan, error) {
 	if !ok {
 		return common.Plan{}, fmt.Errorf("arquitetura Go não suportada: %s", config.Architecture)
 	}
-	archDir := path.Join("templates/go/base", config.Architecture)
-	fwDir := path.Join("templates/go/frameworks", config.Framework)
-	commonDir := "templates/go/base/common"
+	archDir := path.Join("templates/langs/go/base", config.Architecture)
+	fwDir := path.Join("templates/langs/go/frameworks", config.Framework)
+	commonDir := "templates/langs/go/base/common"
+
+	configOutput := "internal/config/config.go"
+	if config.Architecture == "flat" {
+		configOutput = "config/config.go"
+	}
 
 	files := []common.File{
 		{TemplatePath: path.Join(commonDir, "go.mod.tmpl"), OutputPath: "go.mod"},
 		{TemplatePath: path.Join(commonDir, "go.sum.tmpl"), OutputPath: "go.sum"},
 		{TemplatePath: path.Join(commonDir, ".gitignore.tmpl"), OutputPath: ".gitignore"},
 		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
+		{TemplatePath: path.Join(commonDir, "config.go.tmpl"), OutputPath: configOutput},
 		{TemplatePath: path.Join(fwDir, "main.go.tmpl"), OutputPath: arch.main},
+	}
+
+	if config.Database != "" {
+		files = append(files, common.DatabaseFiles(config.Database)...)
 	}
 
 	switch config.Architecture {

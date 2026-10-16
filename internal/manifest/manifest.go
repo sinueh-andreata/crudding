@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"crudding/internal/project"
 )
@@ -28,12 +29,18 @@ type Manifest struct {
 	Framework    string   `json:"framework"`
 	Architecture string   `json:"architecture"`
 	Endpoints    []string `json:"endpoints"`
+	Database     string   `json:"database,omitempty"`
+	Databases    []string `json:"databases,omitempty"`
 }
 
 func New(config project.Config, endpoints ...string) Manifest {
 	eps := slices.Clone(endpoints)
 	if eps == nil {
 		eps = []string{}
+	}
+	var dbs []string
+	if config.Database != "" {
+		dbs = []string{config.Database}
 	}
 	return Manifest{
 		Version:      Version,
@@ -43,6 +50,8 @@ func New(config project.Config, endpoints ...string) Manifest {
 		Framework:    config.Framework,
 		Architecture: config.Architecture,
 		Endpoints:    eps,
+		Database:     config.Database,
+		Databases:    dbs,
 	}
 }
 
@@ -72,7 +81,28 @@ func (m Manifest) Config() project.Config {
 		Runtime:      m.Runtime,
 		Framework:    m.Framework,
 		Architecture: m.Architecture,
+		Database:     m.Database,
 	}
+}
+
+func (m Manifest) HasDatabase(name string) bool {
+	if m.Database == name {
+		return true
+	}
+	return slices.Contains(m.Databases, name)
+}
+
+func (m *Manifest) AddDatabase(name string) {
+	if m.Database == "" {
+		m.Database = name
+	}
+	if !slices.Contains(m.Databases, name) {
+		m.Databases = append(m.Databases, name)
+	}
+}
+
+func (m *Manifest) SetDatabase(db string) {
+	m.AddDatabase(db)
 }
 
 // Stack descreve a combinação de forma legível, ex.: "python + fastapi + modular".
@@ -81,7 +111,13 @@ func (m Manifest) Stack() string {
 	if m.Runtime != "" {
 		language += "/" + m.Runtime
 	}
-	return language + " + " + m.Framework + " + " + m.Architecture
+	s := language + " + " + m.Framework + " + " + m.Architecture
+	if len(m.Databases) > 0 {
+		s += " + " + strings.Join(m.Databases, ", ")
+	} else if m.Database != "" {
+		s += " + " + m.Database
+	}
+	return s
 }
 
 func Write(root string, m Manifest) error {

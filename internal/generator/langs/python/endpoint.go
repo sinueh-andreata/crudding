@@ -199,9 +199,9 @@ func buildEndpointPatch(pkgDir string, layout endpointLayout, config project.Con
 
 	var files []common.File
 	for _, file := range layout.files {
-		templatePath := path.Join("templates/python", file.template)
+		templatePath := path.Join("templates/langs/python", file.template)
 		if file.isController {
-			templatePath = fmt.Sprintf("templates/python/frameworks/%s/controller.py.tmpl", config.Framework)
+			templatePath = fmt.Sprintf("templates/langs/python/frameworks/%s/controller.py.tmpl", config.Framework)
 		}
 		files = append(files, common.File{
 			TemplatePath: templatePath,

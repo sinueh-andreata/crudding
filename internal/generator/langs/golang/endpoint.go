@@ -89,10 +89,10 @@ var endpointLayouts = map[string]endpointLayout{
 		},
 		files: func(framework string) []endpointFile {
 			return []endpointFile{
-				{template: "templates/go/base/common/model.go.tmpl", output: "{name}_model.go"},
-				{template: "templates/go/base/common/types.go.tmpl", output: "{name}_types.go"},
-				{template: "templates/go/base/common/service.go.tmpl", output: "{name}_service.go"},
-				{template: fmt.Sprintf("templates/go/frameworks/%s/handler.go.tmpl", framework), output: "{name}_handler.go"},
+				{template: "templates/langs/go/base/common/model.go.tmpl", output: "{name}_model.go"},
+				{template: "templates/langs/go/base/common/types.go.tmpl", output: "{name}_types.go"},
+				{template: "templates/langs/go/base/common/service.go.tmpl", output: "{name}_service.go"},
+				{template: fmt.Sprintf("templates/langs/go/frameworks/%s/handler.go.tmpl", framework), output: "{name}_handler.go"},
 			}
 		},
 	},
@@ -113,10 +113,10 @@ var endpointLayouts = map[string]endpointLayout{
 		},
 		files: func(framework string) []endpointFile {
 			return []endpointFile{
-				{template: "templates/go/base/common/model.go.tmpl", output: "internal/models/{name}.go"},
-				{template: "templates/go/base/common/types.go.tmpl", output: "internal/types/{name}.go"},
-				{template: "templates/go/base/common/service.go.tmpl", output: "internal/service/{name}.go"},
-				{template: fmt.Sprintf("templates/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/handlers/{name}.go"},
+				{template: "templates/langs/go/base/common/model.go.tmpl", output: "internal/models/{name}.go"},
+				{template: "templates/langs/go/base/common/types.go.tmpl", output: "internal/types/{name}.go"},
+				{template: "templates/langs/go/base/common/service.go.tmpl", output: "internal/service/{name}.go"},
+				{template: fmt.Sprintf("templates/langs/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/handlers/{name}.go"},
 			}
 		},
 	},
@@ -137,10 +137,10 @@ var endpointLayouts = map[string]endpointLayout{
 		},
 		files: func(framework string) []endpointFile {
 			return []endpointFile{
-				{template: "templates/go/base/common/model.go.tmpl", output: "internal/{name}/model.go"},
-				{template: "templates/go/base/common/types.go.tmpl", output: "internal/{name}/types.go"},
-				{template: "templates/go/base/common/service.go.tmpl", output: "internal/{name}/service.go"},
-				{template: fmt.Sprintf("templates/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/{name}/handler.go"},
+				{template: "templates/langs/go/base/common/model.go.tmpl", output: "internal/{name}/model.go"},
+				{template: "templates/langs/go/base/common/types.go.tmpl", output: "internal/{name}/types.go"},
+				{template: "templates/langs/go/base/common/service.go.tmpl", output: "internal/{name}/service.go"},
+				{template: fmt.Sprintf("templates/langs/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/{name}/handler.go"},
 			}
 		},
 	},
@@ -162,13 +162,13 @@ var endpointLayouts = map[string]endpointLayout{
 		},
 		files: func(framework string) []endpointFile {
 			return []endpointFile{
-				{template: "templates/go/base/common/model.go.tmpl", output: "internal/domain/{name}.go"},
-				{template: "templates/go/base/common/types.go.tmpl", output: "internal/domain/{name}_types.go"},
-				{template: "templates/go/base/common/ports_repository.go.tmpl", output: "internal/ports/{name}_repository.go"},
-				{template: "templates/go/base/common/ports_service.go.tmpl", output: "internal/ports/{name}_service.go"},
-				{template: "templates/go/base/common/repository.go.tmpl", output: "internal/adapters/postgres/{name}.go"},
-				{template: "templates/go/base/common/service.go.tmpl", output: "internal/application/{name}.go"},
-				{template: fmt.Sprintf("templates/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/handlers/{name}.go"},
+				{template: "templates/langs/go/base/common/model.go.tmpl", output: "internal/domain/{name}.go"},
+				{template: "templates/langs/go/base/common/types.go.tmpl", output: "internal/domain/{name}_types.go"},
+				{template: "templates/langs/go/base/common/ports_repository.go.tmpl", output: "internal/ports/{name}_repository.go"},
+				{template: "templates/langs/go/base/common/ports_service.go.tmpl", output: "internal/ports/{name}_service.go"},
+				{template: "templates/langs/go/base/common/repository.go.tmpl", output: "internal/adapters/postgres/{name}.go"},
+				{template: "templates/langs/go/base/common/service.go.tmpl", output: "internal/application/{name}.go"},
+				{template: fmt.Sprintf("templates/langs/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/handlers/{name}.go"},
 			}
 		},
 	},
@@ -190,13 +190,13 @@ var endpointLayouts = map[string]endpointLayout{
 		},
 		files: func(framework string) []endpointFile {
 			return []endpointFile{
-				{template: "templates/go/base/common/model.go.tmpl", output: "internal/domain/{name}.go"},
-				{template: "templates/go/base/common/types.go.tmpl", output: "internal/domain/{name}_types.go"},
-				{template: "templates/go/base/common/ports_repository.go.tmpl", output: "internal/ports/{name}_repository.go"},
-				{template: "templates/go/base/common/ports_service.go.tmpl", output: "internal/ports/{name}_service.go"},
-				{template: "templates/go/base/common/repository.go.tmpl", output: "internal/infrastructure/persistence/{name}.go"},
-				{template: "templates/go/base/common/service.go.tmpl", output: "internal/application/{name}.go"},
-				{template: fmt.Sprintf("templates/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/handlers/{name}.go"},
+				{template: "templates/langs/go/base/common/model.go.tmpl", output: "internal/domain/{name}.go"},
+				{template: "templates/langs/go/base/common/types.go.tmpl", output: "internal/domain/{name}_types.go"},
+				{template: "templates/langs/go/base/common/ports_repository.go.tmpl", output: "internal/ports/{name}_repository.go"},
+				{template: "templates/langs/go/base/common/ports_service.go.tmpl", output: "internal/ports/{name}_service.go"},
+				{template: "templates/langs/go/base/common/repository.go.tmpl", output: "internal/infrastructure/persistence/{name}.go"},
+				{template: "templates/langs/go/base/common/service.go.tmpl", output: "internal/application/{name}.go"},
+				{template: fmt.Sprintf("templates/langs/go/frameworks/%s/handler.go.tmpl", framework), output: "internal/handlers/{name}.go"},
 			}
 		},
 	},

@@ -20,11 +20,11 @@ var templates = os.DirFS(filepath.Join("..", ".."))
 // não têm extensão: o runtime (.js/.ts) é acrescentado na checagem.
 var requiredFiles = map[string]map[string][]string{
 	"go": {
-		"flat":       {"main.go", "routes.go", "user_model.go", "user_types.go", "user_service.go", "user_handler.go"},
-		"layered":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/service/user.go", "internal/types/user.go", "internal/models/user.go"},
-		"modular":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/user/handler.go", "internal/user/service.go", "internal/user/types.go", "internal/user/model.go"},
-		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/postgres/user.go", "internal/domain/user.go", "internal/domain/types.go"},
-		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/infrastructure/persistence/user.go", "internal/domain/user.go", "internal/domain/types.go"},
+		"flat":       {"main.go", "routes.go", "user_model.go", "user_types.go", "user_service.go", "user_handler.go", "config/config.go"},
+		"layered":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/service/user.go", "internal/types/user.go", "internal/models/user.go", "internal/config/config.go"},
+		"modular":    {"cmd/api/main.go", "internal/routes/routes.go", "internal/user/handler.go", "internal/user/service.go", "internal/user/types.go", "internal/user/model.go", "internal/config/config.go"},
+		"hexagonal":  {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/adapters/postgres/user.go", "internal/domain/user.go", "internal/domain/types.go", "internal/config/config.go"},
+		"clean_arch": {"cmd/api/main.go", "internal/routes/routes.go", "internal/handlers/user.go", "internal/application/user.go", "internal/ports/repository.go", "internal/ports/service.go", "internal/infrastructure/persistence/user.go", "internal/domain/user.go", "internal/domain/types.go", "internal/config/config.go"},
 	},
 	"node": {
 		"flat":       {"src/main", "src/server", "src/tasks", "src/tasks.test"},
@@ -34,11 +34,11 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"pyproject.toml", "setup.py", "src/resource_controller.py", "src/resource_service.py", "src/resource_model.py", "src/main.py"},
-		"layered":    {"src/app/main.py", "src/app/controllers/resource_controller.py", "src/app/services/resource_service.py", "src/app/models/resource.py"},
-		"modular":    {"src/app/main.py", "src/app/resource/controller.py", "src/app/resource/service.py", "src/app/resource/models.py"},
-		"hexagonal":  {"src/app/main.py", "src/app/routers/resource_controller.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/domain/resource.py"},
-		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/resource_controller.py", "src/app/interface_adapters/controllers/resource_controller.py", "src/app/interface_adapters/presenters/resource_presenter.py", "src/app/application/use_cases/create_resource.py", "src/app/application/use_cases/list_resource.py", "src/app/application/port/outbound/resource_repository.py", "src/app/interface_adapters/persistence/resource_repository.py", "src/app/domain/model/resource.py"},
+		"flat":       {"pyproject.toml", "setup.py", "src/resource_controller.py", "src/resource_service.py", "src/resource_model.py", "src/main.py", "src/config/config.py"},
+		"layered":    {"src/app/main.py", "src/app/controllers/resource_controller.py", "src/app/services/resource_service.py", "src/app/models/resource.py", "src/app/config/config.py"},
+		"modular":    {"src/app/main.py", "src/app/resource/controller.py", "src/app/resource/service.py", "src/app/resource/models.py", "src/app/config/config.py"},
+		"hexagonal":  {"src/app/main.py", "src/app/routers/resource_controller.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/domain/resource.py", "src/app/config/config.py"},
+		"clean_arch": {"src/app/main.py", "src/app/frameworks_and_drivers/web/resource_controller.py", "src/app/interface_adapters/controllers/resource_controller.py", "src/app/interface_adapters/presenters/resource_presenter.py", "src/app/application/use_cases/create_resource.py", "src/app/application/use_cases/list_resource.py", "src/app/application/port/outbound/resource_repository.py", "src/app/interface_adapters/persistence/resource_repository.py", "src/app/domain/model/resource.py", "src/app/config/config.py"},
 	},
 }
 

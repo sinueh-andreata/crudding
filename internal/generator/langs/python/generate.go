@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"crudding/internal/generator/common"
@@ -56,19 +57,26 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	pkgDir := arch.pkgDir
 	entryScript := path.Join(pkgDir, arch.main)
 
-	archDir := path.Join("templates/python/base", config.Architecture)
-	fwDir := path.Join("templates/python/frameworks", config.Framework)
-	commonDir := "templates/python/base/common"
+	archDir := path.Join("templates/langs/python/base", config.Architecture)
+	fwDir := path.Join("templates/langs/python/frameworks", config.Framework)
+	commonDir := "templates/langs/python/base/common"
+
+	configOutput := path.Join(pkgDir, "config", "config.py")
 
 	files := []common.File{
 		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
 		{TemplatePath: path.Join(commonDir, "requirements.txt.tmpl"), OutputPath: "requirements.txt"},
 		{TemplatePath: path.Join(commonDir, ".gitignore.tmpl"), OutputPath: ".gitignore"},
 		{TemplatePath: path.Join(commonDir, "pyproject.toml.tmpl"), OutputPath: "pyproject.toml"},
+		{TemplatePath: path.Join(commonDir, "config.py.tmpl"), OutputPath: configOutput},
 		{TemplatePath: path.Join(fwDir, "main.py.tmpl"), OutputPath: entryScript},
 	}
 
-	packages := []string{pkgDir}
+	if config.Database != "" {
+		files = append(files, common.DatabaseFiles(config.Database)...)
+	}
+
+	packages := []string{pkgDir, path.Join(pkgDir, "config")}
 
 	switch config.Architecture {
 	case "flat":
@@ -114,7 +122,18 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 	packages = append(packages, seedPatch.Packages...)
 
 	data := seedPatch.Data.(templateData)
-	data.Dependencies = FrameworkDependencies[config.Framework]
+	deps := slices.Clone(FrameworkDependencies[config.Framework])
+	if config.Database != "" {
+		switch config.Database {
+		case "postgres":
+			deps = append(deps, "psycopg2-binary>=2.9.9")
+		case "mysql":
+			deps = append(deps, "pymysql>=1.1.0")
+		case "mongo":
+			deps = append(deps, "pymongo>=4.6.0")
+		}
+	}
+	data.Dependencies = deps
 	data.EntryScript = entryScript
 	data.EntryModule = module(entryScript)
 	data.ProjectName = strings.ReplaceAll(filepath.Base(destination), "_", "-")
