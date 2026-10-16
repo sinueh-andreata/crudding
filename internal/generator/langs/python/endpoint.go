@@ -143,6 +143,18 @@ func Endpoint(root string, config project.Config, name string) (common.Patch, er
 	return buildEndpointPatch(pkgDir, layout, config, name)
 }
 
+func RemovePlan(root string, config project.Config, name string) (common.RemovalPlan, error) {
+	layout, err := endpointLayoutFor(config.Architecture)
+	if err != nil {
+		return common.RemovalPlan{}, err
+	}
+	pkgDir, err := findPackage(root)
+	if err != nil {
+		return common.RemovalPlan{}, err
+	}
+	return buildEndpointRemovalPlan(pkgDir, layout, config, name)
+}
+
 func endpointPatchForPackage(pkgDir string, config project.Config, name string) (common.Patch, error) {
 	layout, err := endpointLayoutFor(config.Architecture)
 	if err != nil {
@@ -214,6 +226,48 @@ func buildEndpointPatch(pkgDir string, layout endpointLayout, config project.Con
 			{Path: mainScript, Marker: routesMarker, Lines: []string{
 				registration.routePattern(name, data.Route, data.Class),
 			}},
+		},
+	}, nil
+}
+
+func buildEndpointRemovalPlan(pkgDir string, layout endpointLayout, config project.Config, name string) (common.RemovalPlan, error) {
+	if slices.Contains(pythonKeywords, name) {
+		return common.RemovalPlan{}, fmt.Errorf("%q é uma palavra reservada do Python", name)
+	}
+	registration, ok := frameworkRegistrations[config.Framework]
+	if !ok {
+		return common.RemovalPlan{}, fmt.Errorf("framework Python não suportado: %s", config.Framework)
+	}
+	expand := func(rel string) string { return strings.ReplaceAll(rel, nameToken, name) }
+
+	var files []string
+	for _, file := range layout.files {
+		files = append(files, path.Join(pkgDir, expand(file.output)))
+	}
+	for _, pkg := range layout.packages {
+		files = append(files, path.Join(pkgDir, expand(pkg), "__init__.py"))
+	}
+
+	packages := make([]string, len(layout.packages))
+	for index, pkg := range layout.packages {
+		packages[index] = path.Join(pkgDir, expand(pkg))
+	}
+
+	controllerModule := module(path.Join(pkgDir, expand(layout.controllerOutput)))
+	mainScript := path.Join(pkgDir, "main.py")
+	class := className(name)
+	route := strings.ReplaceAll(name, "_", "-")
+
+	linesToRemove := []string{
+		registration.importPattern(controllerModule, name),
+		registration.routePattern(name, route, class),
+	}
+
+	return common.RemovalPlan{
+		Files:       files,
+		Directories: packages,
+		Removals: []common.LineRemoval{
+			{Path: mainScript, Lines: linesToRemove},
 		},
 	}, nil
 }

@@ -126,3 +126,37 @@ func TestApplyRefusesExistingFiles(t *testing.T) {
 		t.Errorf("arquivo existente alterado: %q", got)
 	}
 }
+
+func TestRemoveExecutesPlan(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "api.py", "import x\nimport y\n# m:imports\n\nline1\nline2\n# m:routes\n")
+	writeFile(t, root, "pkg/sub/file.go", "package sub")
+
+	res, err := common.Remove(root, common.RemovalPlan{
+		Files:       []string{"pkg/sub/file.go"},
+		Directories: []string{"pkg/sub", "pkg"},
+		Removals: []common.LineRemoval{
+			{Path: "api.py", Lines: []string{"import y", "line2"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Remove() error = %v", err)
+	}
+
+	if len(res.Removed) != 1 || res.Removed[0] != "pkg/sub/file.go" {
+		t.Errorf("res.Removed = %v", res.Removed)
+	}
+	if len(res.Modified) != 1 || res.Modified[0] != "api.py" {
+		t.Errorf("res.Modified = %v", res.Modified)
+	}
+
+	wantAPI := "import x\n# m:imports\n\nline1\n# m:routes\n"
+	if got := readFile(t, root, "api.py"); got != wantAPI {
+		t.Errorf("api.py =\n%s\nwant\n%s", got, wantAPI)
+	}
+
+	if _, err := os.Stat(filepath.Join(root, "pkg")); !os.IsNotExist(err) {
+		t.Error("diretórios vazios pkg/sub e pkg deveriam ter sido removidos")
+	}
+}
+

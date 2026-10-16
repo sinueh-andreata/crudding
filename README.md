@@ -41,7 +41,16 @@ crudding add endpoint
 
 crudding looks for `project.crud` in the current directory or any parent, asks for the endpoint name (snake_case, e.g. `invoice`, `order_item`) and creates a CRUD resource following the project's architecture: `GET/POST /<name>` and `GET/PATCH/DELETE /<name>/<id>` (underscores become hyphens in the URL). Each layer is created as a stub that raises `NotImplementedError`, so the routes answer `501` until you implement them. The new routes are registered in the dispatcher at the `# crudding:imports` and `# crudding:routes` markers; keep these lines in place. Existing files are never overwritten, and if anything fails no change is kept.
 
-Currently supported for Python (all architectures and frameworks). Go and Node projects report that the command is not supported yet.
+Currently supported for Python and Go (all architectures and frameworks). Node projects report that the command is not supported yet.
+
+## Remove an Endpoint
+
+```sh
+cd my-api
+crudding remove endpoint <name>
+```
+
+Removes the generated files of the specified entity, cleans up the corresponding route and import lines from the router dispatcher, and updates `project.crud`. Supported for Python and Go.
 
 ## Project Structure
 

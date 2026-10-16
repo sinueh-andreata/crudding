@@ -46,6 +46,40 @@ func AddEndpoint(root string, m manifest.Manifest, name string, templates fs.FS)
 	return result, nil
 }
 
+// RemoveEndpoint remove um recurso CRUD do projeto em root, limpa as linhas de
+// rota inseridas no roteador e atualiza o array de endpoints em project.crud.
+func RemoveEndpoint(root string, m manifest.Manifest, name string) (common.RemoveResult, error) {
+	language, err := endpointLanguage(m)
+	if err != nil {
+		return common.RemoveResult{}, err
+	}
+	if language.removePlan == nil {
+		return common.RemoveResult{}, fmt.Errorf("remove endpoint ainda não suportado para %s", language.Label)
+	}
+	if !m.HasEndpoint(name) {
+		return common.RemoveResult{}, fmt.Errorf("endpoint %q não encontrado em %s", name, manifest.FileName)
+	}
+
+	plan, err := language.removePlan(root, m.Config(), name)
+	if err != nil {
+		return common.RemoveResult{}, err
+	}
+	result, err := common.Remove(root, plan)
+	if err != nil {
+		return common.RemoveResult{}, err
+	}
+
+	updated := m
+	if onDisk, readErr := manifest.Read(filepath.Join(root, manifest.FileName)); readErr == nil {
+		updated = onDisk
+	}
+	updated.RemoveEndpoint(name)
+	if err := manifest.Write(root, updated); err != nil {
+		return common.RemoveResult{}, err
+	}
+	return result, nil
+}
+
 func endpointLanguage(m manifest.Manifest) (Language, error) {
 	language, ok := Lookup(m.Language)
 	if !ok {

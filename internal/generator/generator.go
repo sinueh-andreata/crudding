@@ -24,11 +24,14 @@ type Language struct {
 	// endpoint monta o Patch de "crudding add endpoint"; nil enquanto a
 	// linguagem não suporta o comando.
 	endpoint func(root string, config project.Config, name string) (common.Patch, error)
+	// removePlan monta o RemovalPlan de "crudding remove endpoint"; nil enquanto
+	// a linguagem não suporta o comando.
+	removePlan func(root string, config project.Config, name string) (common.RemovalPlan, error)
 }
 
 var languages = []Language{
-	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, plan: python.Plan, endpoint: python.Endpoint},
-	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, plan: golang.Plan, endpoint: golang.Endpoint},
+	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, plan: python.Plan, endpoint: python.Endpoint, removePlan: python.RemovePlan},
+	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, plan: golang.Plan, endpoint: golang.Endpoint, removePlan: golang.RemovePlan},
 	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, plan: node.Plan},
 }
 

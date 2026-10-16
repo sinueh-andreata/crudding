@@ -296,6 +296,65 @@ func Endpoint(root string, config project.Config, name string) (common.Patch, er
 	}, nil
 }
 
+// RemovePlan monta o RemovalPlan para excluir um recurso CRUD em um projeto Go existente.
+func RemovePlan(root string, config project.Config, name string) (common.RemovalPlan, error) {
+	if slices.Contains(goKeywords, name) {
+		return common.RemovalPlan{}, fmt.Errorf("%q é uma palavra reservada do Go", name)
+	}
+
+	layout, ok := endpointLayouts[config.Architecture]
+	if !ok {
+		return common.RemovalPlan{}, fmt.Errorf("remove endpoint não suportado para a arquitetura Go %s", config.Architecture)
+	}
+
+	goModule, err := readGoModule(root)
+	if err != nil {
+		goModule = "example.com/" + project.Slug(config.ProjectName)
+	}
+
+	class := className(name)
+	varName := strings.ToLower(class[:1]) + class[1:]
+	route := strings.ReplaceAll(name, "_", "-")
+
+	expand := func(p string) string {
+		return strings.ReplaceAll(p, nameToken, name)
+	}
+
+	var files []string
+	for _, f := range layout.files(config.Framework) {
+		files = append(files, expand(f.output))
+	}
+
+	var linesToRemove []string
+	if config.Architecture == "modular" {
+		linesToRemove = append(linesToRemove, fmt.Sprintf("\"%s/internal/%s\"", goModule, name))
+	}
+
+	if layout.routeLines != nil {
+		lines := layout.routeLines(config.Framework, route, class, varName, name)
+		linesToRemove = append(linesToRemove, lines...)
+	}
+
+	var removals []common.LineRemoval
+	if len(linesToRemove) > 0 {
+		removals = append(removals, common.LineRemoval{
+			Path:  layout.routerFile,
+			Lines: linesToRemove,
+		})
+	}
+
+	var dirs []string
+	if config.Architecture == "modular" {
+		dirs = append(dirs, fmt.Sprintf("internal/%s", name))
+	}
+
+	return common.RemovalPlan{
+		Files:       files,
+		Directories: dirs,
+		Removals:    removals,
+	}, nil
+}
+
 func readGoModule(root string) (string, error) {
 	content, err := os.ReadFile(filepath.Join(root, "go.mod"))
 	if err != nil {

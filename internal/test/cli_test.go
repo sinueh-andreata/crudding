@@ -318,6 +318,80 @@ func TestCLIAddEndpointNonInteractive(t *testing.T) {
 	}
 }
 
+func TestCLIRemoveEndpoint(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	var stdout, stderr bytes.Buffer
+	newArgs := []string{"new", "n:meu-app", "l:go", "f:gin", "a:hexagonal"}
+	if code := cli.Run(newArgs, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(new) exit code = %d, stderr = %q", code, stderr.String())
+	}
+
+	projectDir := filepath.Join(tmp, "meu-app")
+	chdirTemp(t, projectDir)
+
+	// Adiciona product e order_item
+	cli.Run([]string{"add", "endpoint", "product"}, &stdout, &stderr)
+	cli.Run([]string{"add", "endpoint", "order_item"}, &stdout, &stderr)
+	assertFilesExist(t, projectDir, "internal/handlers/product.go", "internal/handlers/order_item.go")
+
+	// Remover product com argumento posicional
+	stdout.Reset()
+	stderr.Reset()
+	removeArgs := []string{"remove", "endpoint", "product"}
+	if code := cli.Run(removeArgs, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(%v) exit code = %d, stderr = %q", removeArgs, code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Endpoint product removido.") {
+		t.Fatalf("stdout = %q, missing remove summary", stdout.String())
+	}
+	assertFilesAbsent(t, projectDir, "internal/handlers/product.go")
+	assertFilesExist(t, projectDir, "internal/handlers/order_item.go")
+
+	// Remover order_item com flag n:
+	stdout.Reset()
+	stderr.Reset()
+	removeFlagArgs := []string{"remove", "endpoint", "n:order_item"}
+	if code := cli.Run(removeFlagArgs, &stdout, &stderr); code != 0 {
+		t.Fatalf("Run(%v) exit code = %d, stderr = %q", removeFlagArgs, code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Endpoint order_item removido.") {
+		t.Fatalf("stdout = %q, missing remove summary", stdout.String())
+	}
+	assertFilesAbsent(t, projectDir, "internal/handlers/order_item.go")
+
+	// Tentar remover endpoint já removido
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"remove", "endpoint", "product"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("remover endpoint inexistente exit code = %d, want 1", code)
+	}
+	if !strings.Contains(stderr.String(), "não encontrado") {
+		t.Fatalf("stderr = %q, want não encontrado error", stderr.String())
+	}
+
+	// Nome inválido
+	stdout.Reset()
+	stderr.Reset()
+	if code := cli.Run([]string{"remove", "endpoint", "Bad-Name"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("remover com nome inválido exit code = %d, want 1", code)
+	}
+
+	// Help flags
+	for _, h := range []string{"-h", "--help", "help"} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run([]string{"remove", "endpoint", h}, &stdout, &stderr); code != 0 {
+			t.Fatalf("Run(remove endpoint %s) exit code = %d, want 0", h, code)
+		}
+		if !strings.Contains(stdout.String(), "crudding remove endpoint") {
+			t.Fatalf("stdout = %q, missing remove endpoint usage", stdout.String())
+		}
+	}
+}
+
+
 func TestCLIStacks(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := cli.Run([]string{"stacks"}, &stdout, &stderr)

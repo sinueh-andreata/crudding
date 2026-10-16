@@ -56,3 +56,36 @@ func TestFindErrors(t *testing.T) {
 		t.Error("Find() JSON inválido deveria falhar")
 	}
 }
+
+func TestManifestEndpoints(t *testing.T) {
+	m := manifest.New(project.Config{ProjectName: "app", Language: "go", Framework: "gin", Architecture: "flat"}, "user")
+	if !m.HasEndpoint("user") {
+		t.Error("HasEndpoint(user) = false, want true")
+	}
+	if m.HasEndpoint("customer") {
+		t.Error("HasEndpoint(customer) = true, want false")
+	}
+
+	m.AddEndpoint("customer")
+	if !m.HasEndpoint("customer") || len(m.Endpoints) != 2 {
+		t.Fatalf("AddEndpoint(customer) falhou: endpoints = %v", m.Endpoints)
+	}
+
+	// Não duplica
+	m.AddEndpoint("customer")
+	if len(m.Endpoints) != 2 {
+		t.Fatalf("AddEndpoint duplicado alterou tamanho: %v", m.Endpoints)
+	}
+
+	if !m.RemoveEndpoint("customer") {
+		t.Error("RemoveEndpoint(customer) = false, want true")
+	}
+	if m.HasEndpoint("customer") || len(m.Endpoints) != 1 {
+		t.Fatalf("RemoveEndpoint falhou em remover: %v", m.Endpoints)
+	}
+
+	if m.RemoveEndpoint("nonexistent") {
+		t.Error("RemoveEndpoint(nonexistent) = true, want false")
+	}
+}
+

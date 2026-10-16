@@ -55,6 +55,11 @@ var commands = []Command{
 		Summary: "adiciona um endpoint CRUD ao projeto atual (lê o project.crud)",
 		Run:     runAddEndpoint,
 	},
+	{
+		Args:    "remove endpoint",
+		Summary: "remove um endpoint CRUD do projeto atual (lê o project.crud)",
+		Run:     runRemoveEndpoint,
+	},
 }
 
 // Commands devolve a lista de comandos registrados na CLI.

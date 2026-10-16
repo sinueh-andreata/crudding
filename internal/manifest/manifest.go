@@ -52,6 +52,19 @@ func (m *Manifest) AddEndpoint(name string) {
 	}
 }
 
+func (m *Manifest) RemoveEndpoint(name string) bool {
+	idx := slices.Index(m.Endpoints, name)
+	if idx < 0 {
+		return false
+	}
+	m.Endpoints = slices.Delete(m.Endpoints, idx, idx+1)
+	return true
+}
+
+func (m Manifest) HasEndpoint(name string) bool {
+	return slices.Contains(m.Endpoints, name)
+}
+
 func (m Manifest) Config() project.Config {
 	return project.Config{
 		ProjectName:  m.Name,

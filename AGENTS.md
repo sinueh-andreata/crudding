@@ -48,22 +48,24 @@ crudding/
 │   ├── cli/
 │   │   ├── cli.go               # Registro de comandos, roteador Run e geração automática de --help
 │   │   ├── new.go               # Comando padrão de criação de projeto (runNew)
-│   │   └── add_endpoint.go      # Comando "crudding add endpoint" (runAddEndpoint)
+│   │   ├── add_endpoint.go      # Comando "crudding add endpoint" (runAddEndpoint)
+│   │   └── remove_endpoint.go   # Comando "crudding remove endpoint" (runRemoveEndpoint)
 │   ├── generator/
 │   │   ├── common/
 │   │   │   ├── files.go         # Utilitários de escrita de arquivos e template parsing
 │   │   │   ├── scaffold.go      # Criação do projeto (Plan) e gravação do project.crud
-│   │   │   └── patch.go         # Alterações em projeto existente (Patch): arquivos novos, pacotes Python e inserções em markers, com rollback
+│   │   │   ├── patch.go         # Alterações em projeto existente (Patch): arquivos novos, pacotes Python e inserções em markers, com rollback
+│   │   │   └── remove.go        # Remoção de endpoint (RemovalPlan): exclusão de arquivos, limpeza de linhas e diretórios vazios
 │   │   ├── langs/
 │   │   │   ├── golang/
 │   │   │   │   ├── generate.go  # Gerador específico para projetos Go
-│   │   │   │   └── endpoint.go  # Layouts de "add endpoint" por arquitetura Go
+│   │   │   │   └── endpoint.go  # Layouts de "add endpoint" e "remove endpoint" por arquitetura Go
 │   │   │   ├── node/generate.go   # Gerador específico para projetos Node (JS/TS)
 │   │   │   └── python/
 │   │   │       ├── generate.go   # Gerador específico para projetos Python
-│   │   │       └── endpoint.go   # Layouts de "add endpoint" por arquitetura Python
+│   │   │       └── endpoint.go   # Layouts de "add endpoint" e "remove endpoint" por arquitetura Python
 │   │   ├── generator.go         # Dispatcher central do gerador
-│   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint"
+│   │   ├── endpoint.go          # Dispatcher de "crudding add endpoint" e "crudding remove endpoint"
 │   ├── manifest/
 │   │   └── manifest.go          # Leitura/escrita do project.crud (JSON) e busca nos diretórios pais
 │   ├── project/
@@ -114,7 +116,16 @@ crudding/
 4. A função `endpoint` da linguagem monta um `common.Patch`: os templates necessários, os pacotes e as inserções nos markers `# crudding:imports` / `# crudding:routes` do módulo de API.
 5. `common.Apply` valida tudo antes de gravar (nada pode ser sobrescrito, cada marker aparece uma única vez) e desfaz as alterações se a gravação falhar.
 
-**Para suportar uma nova linguagem**: implemente `endpoint` em `internal/generator/langs/<lang>/endpoint.go`, registre-o em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates correspondentes. Os markers não podem ser removidos dos templates existentes.
+### `crudding remove endpoint`
+
+1. `manifest.Find` localiza a raiz do projeto e lê o `project.crud`.
+2. `generator.CheckEndpointSupport` confirma suporte à linguagem.
+3. `project.ReadEndpointName` lê o nome (ou via argumentos `name:<nome>`, `n:<nome>` ou posicional).
+4. Verifica se o endpoint está registrado no `project.crud`.
+5. A função `removePlan` da linguagem monta um `common.RemovalPlan`: arquivos a deletar, diretórios que devem ser excluídos se ficarem vazios e linhas a remover dos arquivos de rotas/imports.
+6. `common.Remove` remove os arquivos, limpa as linhas das rotas, limpa pastas vazias e atualiza o manifesto `project.crud` com rollback caso haja erro na gravação.
+
+**Para suportar uma nova linguagem**: implemente `endpoint` e `removePlan` em `internal/generator/langs/<lang>/endpoint.go`, registre-os em `languages` (`generator.go`), adicione os markers nos templates de roteamento da linguagem e crie os templates correspondentes. Os markers não podem ser removidos dos templates existentes.
 
 ---
 
