@@ -554,7 +554,7 @@ func updateProjectDependencies(root string, m manifest.Manifest, db string, resu
 	case "go":
 		return updateGoDependencies(root, db, result)
 	case "python":
-		return updatePythonDependencies(root, db, result)
+		return updatePythonDependencies(root, m, db, result)
 	case "node":
 		return updateNodeDependencies(root, m.Runtime, db, result)
 	}
@@ -600,7 +600,7 @@ func updateGoDependencies(root string, db string, result *common.Result) error {
 	return nil
 }
 
-func updatePythonDependencies(root string, db string, result *common.Result) error {
+func updatePythonDependencies(root string, m manifest.Manifest, db string, result *common.Result) error {
 	reqPath := filepath.Join(root, "requirements.txt")
 	content, err := os.ReadFile(reqPath)
 	if err != nil {
@@ -621,14 +621,26 @@ func updatePythonDependencies(root string, db string, result *common.Result) err
 	}
 
 	text := string(content)
-	if strings.Contains(text, pkg) || strings.Contains(text, strings.Split(pkg, ">=")[0]) {
-		return nil
+	modified := false
+	if !strings.Contains(text, pkg) && !strings.Contains(text, strings.Split(pkg, ">=")[0]) {
+		if !strings.HasSuffix(text, "\n") && len(text) > 0 {
+			text += "\n"
+		}
+		text += pkg + "\n"
+		modified = true
 	}
 
-	if !strings.HasSuffix(text, "\n") && len(text) > 0 {
-		text += "\n"
+	if m.ORM == "sqlalchemy" && !strings.Contains(text, "SQLAlchemy") {
+		if !strings.HasSuffix(text, "\n") && len(text) > 0 {
+			text += "\n"
+		}
+		text += "SQLAlchemy>=2.0.0\n"
+		modified = true
 	}
-	text += pkg + "\n"
+
+	if !modified {
+		return nil
+	}
 
 	if err := os.WriteFile(reqPath, []byte(text), 0644); err != nil {
 		return fmt.Errorf("atualizar requirements.txt: %w", err)

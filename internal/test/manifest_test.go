@@ -89,3 +89,24 @@ func TestManifestEndpoints(t *testing.T) {
 	}
 }
 
+func TestManifestWithORM(t *testing.T) {
+	cfg := project.Config{
+		ProjectName:  "go_orm_app",
+		Language:     "go",
+		Framework:    "gin",
+		Architecture: "hexagonal",
+		Database:     "postgres",
+		ORM:          "gorm",
+	}
+	m := manifest.New(cfg, "user")
+	if m.ORM != "gorm" {
+		t.Errorf("m.ORM = %q, want gorm", m.ORM)
+	}
+	if m.Config().ORM != "gorm" {
+		t.Errorf("m.Config().ORM = %q, want gorm", m.Config().ORM)
+	}
+	if got := m.Stack(); got != "go + gin + hexagonal + postgres + gorm" {
+		t.Errorf("m.Stack() = %q, want %q", got, "go + gin + hexagonal + postgres + gorm")
+	}
+}
+

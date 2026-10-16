@@ -7,4 +7,5 @@ type Config struct {
 	Framework    string
 	Architecture string
 	Database     string
+	ORM          string
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
+	"strings"
 
 	"crudding/internal/generator/common"
 	"crudding/internal/generator/langs/golang"
@@ -20,6 +21,7 @@ type Language struct {
 	Runtimes      []string // vazio quando a linguagem não pergunta runtime
 	Frameworks    []string
 	Architectures []string
+	ORMs          []string
 	plan          func(destination string, config project.Config) (common.Plan, error)
 	// endpoint monta o Patch de "crudding add endpoint"; nil enquanto a
 	// linguagem não suporta o comando.
@@ -30,9 +32,9 @@ type Language struct {
 }
 
 var languages = []Language{
-	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, plan: python.Plan, endpoint: python.Endpoint, removePlan: python.RemovePlan},
-	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, plan: golang.Plan, endpoint: golang.Endpoint, removePlan: golang.RemovePlan},
-	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, plan: node.Plan},
+	{Name: "python", Label: "Python", Frameworks: python.Frameworks, Architectures: python.Architectures, ORMs: python.ORMs, plan: python.Plan, endpoint: python.Endpoint, removePlan: python.RemovePlan},
+	{Name: "go", Label: "Go", Frameworks: golang.Frameworks, Architectures: golang.Architectures, ORMs: golang.ORMs, plan: golang.Plan, endpoint: golang.Endpoint, removePlan: golang.RemovePlan},
+	{Name: "node", Label: "Node", Runtimes: node.Runtimes, Frameworks: node.Frameworks, Architectures: node.Architectures, ORMs: node.ORMs, plan: node.Plan},
 }
 
 // Languages devolve as linguagens suportadas, na ordem de exibição do menu.
@@ -48,6 +50,23 @@ func Lookup(name string) (Language, bool) {
 	return languages[index], true
 }
 
+// ValidateORM verifica se o ORM informado é compatível com a linguagem e o banco.
+func ValidateORM(language Language, db, orm string) error {
+	if orm == "" || orm == "none" || orm == "nenhum" {
+		return nil
+	}
+	if db == "" {
+		return fmt.Errorf("ORM %q informado, mas nenhum banco de dados foi selecionado", orm)
+	}
+	if db == "mongo" {
+		return fmt.Errorf("ORM %q não é suportado com banco mongo", orm)
+	}
+	if !slices.Contains(language.ORMs, orm) {
+		return fmt.Errorf("ORM %s não suportado: %s (opções: %s)", language.Label, orm, strings.Join(language.ORMs, ", "))
+	}
+	return nil
+}
+
 func (l Language) validate(config project.Config) error {
 	if len(l.Runtimes) > 0 && !slices.Contains(l.Runtimes, config.Runtime) {
 		return fmt.Errorf("runtime %s não suportado: %s", l.Label, config.Runtime)
@@ -57,6 +76,9 @@ func (l Language) validate(config project.Config) error {
 	}
 	if !slices.Contains(l.Architectures, config.Architecture) {
 		return fmt.Errorf("arquitetura %s não suportada: %s", l.Label, config.Architecture)
+	}
+	if err := ValidateORM(l, config.Database, config.ORM); err != nil {
+		return err
 	}
 	return nil
 }

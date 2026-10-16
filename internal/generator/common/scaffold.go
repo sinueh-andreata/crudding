@@ -61,6 +61,7 @@ type BaseData struct {
 	Framework    string
 	Architecture string
 	Database     string
+	ORM          string
 }
 
 func NewBaseData(config project.Config) BaseData {
@@ -70,6 +71,7 @@ func NewBaseData(config project.Config) BaseData {
 		Framework:    config.Framework,
 		Architecture: config.Architecture,
 		Database:     config.Database,
+		ORM:          config.ORM,
 	}
 }
 
@@ -79,4 +81,11 @@ func (b BaseData) HasDatabase(name string) bool {
 
 func (b BaseData) HasAnyDatabase() bool {
 	return b.Database != ""
+}
+
+func (b BaseData) HasORM(name ...string) bool {
+	if len(name) == 0 {
+		return b.ORM != "" && b.ORM != "none" && b.ORM != "nenhum"
+	}
+	return b.ORM == name[0]
 }

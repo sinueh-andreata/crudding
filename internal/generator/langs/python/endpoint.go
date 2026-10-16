@@ -182,6 +182,7 @@ func buildEndpointPatch(pkgDir string, layout endpointLayout, config project.Con
 	expand := func(rel string) string { return strings.ReplaceAll(rel, nameToken, name) }
 
 	modules := make(map[string]string)
+	modules["config"] = module(path.Join(pkgDir, "config", "config.py"))
 	for _, file := range layout.files {
 		if file.moduleKey != "" {
 			modules[file.moduleKey] = module(path.Join(pkgDir, expand(file.output)))

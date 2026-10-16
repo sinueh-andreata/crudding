@@ -1,9 +1,13 @@
 import os
-{{- if .HasDatabase "postgres" }}
+{{- if .HasORM "sqlalchemy" }}
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+{{- end }}
+{{- if and (.HasDatabase "postgres") (not .HasORM) }}
 import psycopg2
 from psycopg2.extras import RealDictCursor
 {{- end }}
-{{- if .HasDatabase "mysql" }}
+{{- if and (.HasDatabase "mysql") (not .HasORM) }}
 import pymysql
 from pymysql.cursors import DictCursor
 {{- end }}
@@ -43,7 +47,54 @@ class Config:
 
 
 config = Config()
+{{- if .HasORM "sqlalchemy" }}
+
+Base = declarative_base()
+
 {{- if .HasDatabase "postgres" }}
+
+
+def get_sqlalchemy_engine():
+    """Retorna a engine do SQLAlchemy para PostgreSQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        database_url = (
+            f"postgresql+psycopg2://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', 'postgres')}@"
+            f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'app')}"
+        )
+    return create_engine(database_url)
+{{- else if .HasDatabase "mysql" }}
+
+
+def get_sqlalchemy_engine():
+    """Retorna a engine do SQLAlchemy para MySQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        database_url = (
+            f"mysql+pymysql://{config.MYSQL_USER}:{config.MYSQL_PASSWORD}@"
+            f"{config.MYSQL_HOST}:{config.MYSQL_PORT}/{config.MYSQL_DB}"
+        )
+    return create_engine(database_url)
+{{- end }}
+
+engine = get_sqlalchemy_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """Generator de sessão do SQLAlchemy."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """Cria as tabelas no banco de dados se não existirem."""
+    Base.metadata.create_all(bind=engine)
+{{- end }}
+{{- if and (.HasDatabase "postgres") (not .HasORM) }}
 
 
 def get_postgres_connection():
@@ -64,7 +115,7 @@ def get_postgres_connection():
 
 get_connection = get_postgres_connection
 {{- end }}
-{{- if .HasDatabase "mysql" }}
+{{- if and (.HasDatabase "mysql") (not .HasORM) }}
 
 
 def get_mysql_connection():

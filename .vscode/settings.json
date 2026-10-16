@@ -1,5 +1,6 @@
 {
     "chat.tools.terminal.autoApprove": {
-        "flatpak-spawn": true
+        "flatpak-spawn": true,
+        "go": true
     }
 }

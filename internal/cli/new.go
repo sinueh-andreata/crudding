@@ -69,6 +69,10 @@ func promptConfig(stdout io.Writer) (project.Config, error) {
 	if err != nil {
 		return project.Config{}, err
 	}
+	orm, err := chooseORM(language, database)
+	if err != nil {
+		return project.Config{}, err
+	}
 	projectName, err := project.ReadProjectName(os.Stdin, stdout)
 	if err != nil {
 		return project.Config{}, err
@@ -80,6 +84,7 @@ func promptConfig(stdout io.Writer) (project.Config, error) {
 		Framework:    framework,
 		Architecture: architecture,
 		Database:     database,
+		ORM:          orm,
 	}, nil
 }
 
@@ -95,6 +100,21 @@ func chooseDatabase(language generator.Language) (string, error) {
 		return "", nil
 	}
 	return db, nil
+}
+
+func chooseORM(language generator.Language, database string) (string, error) {
+	if database == "" || database == "mongo" || len(language.ORMs) == 0 {
+		return "", nil
+	}
+	options := append([]string{"nenhum"}, language.ORMs...)
+	choice, err := choose("escolha o ORM", options)
+	if err != nil {
+		return "", err
+	}
+	if choice == "nenhum" {
+		return "", nil
+	}
+	return choice, nil
 }
 
 func uniqueValues(extract func(generator.Language) []string) []string {
@@ -130,6 +150,11 @@ func optionsForKey(key, selectedLang string) (string, []string, bool) {
 		return "arch/a", uniqueValues(func(l generator.Language) []string { return l.Architectures }), true
 	case "db", "d", "database":
 		return "db/d", []string{"none", "postgres", "mysql", "mongo"}, true
+	case "orm", "o":
+		if lang, ok := generator.Lookup(selectedLang); ok {
+			return "orm/o", append([]string{"none"}, lang.ORMs...), true
+		}
+		return "orm/o", append([]string{"none"}, uniqueValues(func(l generator.Language) []string { return l.ORMs })...), true
 	default:
 		return "", nil, false
 	}
@@ -155,15 +180,16 @@ func NewUsage() string {
 	b.WriteString("  - Passando apenas o nome ou a primeira letra da flag (ex.: \"crudding new l\" ou\n")
 	b.WriteString("    \"crudding new f\"), lista as opções disponíveis para aquela flag (exceto name/n).\n\n")
 	b.WriteString("uso:\n")
-	b.WriteString("  crudding new name:<nome> lang:<linguagem> framework:<framework> arch:<arquitetura> [runtime:<runtime>] [db:<banco>]\n")
-	b.WriteString("  crudding new n:<nome> l:<linguagem> f:<framework> a:<arquitetura> [r:<runtime>] [d:<banco>]\n\n")
+	b.WriteString("  crudding new name:<nome> lang:<linguagem> framework:<framework> arch:<arquitetura> [runtime:<runtime>] [db:<banco>] [orm:<orm>]\n")
+	b.WriteString("  crudding new n:<nome> l:<linguagem> f:<framework> a:<arquitetura> [r:<runtime>] [d:<banco>] [o:<orm>]\n\n")
 	b.WriteString("como cada flag funciona:\n")
 	b.WriteString("  name:<nome> ou n:<nome>               define o nome do projeto (pasta que será criada)\n")
 	b.WriteString("  lang:<linguagem> ou l:<linguagem>     define a linguagem do projeto\n")
 	b.WriteString("  framework:<fw> ou f:<fw>              define o framework HTTP utilizado\n")
 	b.WriteString("  arch:<arquitetura> ou a:<arquitetura> define o padrão arquitetural de pastas\n")
 	b.WriteString("  runtime:<runtime> ou r:<runtime>      define o runtime (obrigatório para node)\n")
-	b.WriteString("  db:<banco> ou d:<banco>               define o banco de dados (opcional: postgres, mysql, mongo, none)\n\n")
+	b.WriteString("  db:<banco> ou d:<banco>               define o banco de dados (opcional: postgres, mysql, mongo, none)\n")
+	b.WriteString("  orm:<orm> ou o:<orm>                  define o ORM utilizado (opcional: none, gorm, sqlalchemy, etc.)\n\n")
 	b.WriteString("exemplos:\n")
 	b.WriteString("  crudding new name:meu-app lang:go framework:gin arch:hexagonal\n")
 	b.WriteString("  crudding new n:meu-app l:go f:gin a:hexagonal\n")
@@ -171,7 +197,7 @@ func NewUsage() string {
 	b.WriteString("  crudding new l\n")
 	b.WriteString("  crudding new l:go f\n\n")
 	b.WriteString("opções disponíveis:\n\n")
-	for _, key := range []string{"lang", "runtime", "framework", "arch", "db"} {
+	for _, key := range []string{"lang", "runtime", "framework", "arch", "db", "orm"} {
 		label, values, _ := optionsForKey(key, "")
 		b.WriteString(formatOptionBlock(label, values))
 		b.WriteString("\n")
@@ -246,6 +272,16 @@ func parseNewArgs(args []string) (project.Config, string, error) {
 				}
 				config.Database = value
 			}
+		case "orm", "o":
+			if !hasColon || value == "" {
+				inspectKeys = append(inspectKeys, "orm")
+				continue
+			}
+			if value == "none" || value == "nenhum" {
+				config.ORM = ""
+			} else {
+				config.ORM = value
+			}
 		default:
 			return project.Config{}, "", fmt.Errorf("flag desconhecida: %s", token)
 		}
@@ -306,6 +342,9 @@ func printNewSummary(stdout io.Writer, projectDirectory string, config project.C
 	fmt.Fprintf(stdout, "Framework: %s\nArquitetura: %s\n", config.Framework, config.Architecture)
 	if config.Database != "" {
 		fmt.Fprintf(stdout, "Banco de dados: %s\n", config.Database)
+	}
+	if config.ORM != "" {
+		fmt.Fprintf(stdout, "ORM: %s\n", config.ORM)
 	}
 }
 

@@ -31,6 +31,7 @@ type Manifest struct {
 	Endpoints    []string `json:"endpoints"`
 	Database     string   `json:"database,omitempty"`
 	Databases    []string `json:"databases,omitempty"`
+	ORM          string   `json:"orm,omitempty"`
 }
 
 func New(config project.Config, endpoints ...string) Manifest {
@@ -52,6 +53,7 @@ func New(config project.Config, endpoints ...string) Manifest {
 		Endpoints:    eps,
 		Database:     config.Database,
 		Databases:    dbs,
+		ORM:          config.ORM,
 	}
 }
 
@@ -82,6 +84,7 @@ func (m Manifest) Config() project.Config {
 		Framework:    m.Framework,
 		Architecture: m.Architecture,
 		Database:     m.Database,
+		ORM:          m.ORM,
 	}
 }
 
@@ -116,6 +119,9 @@ func (m Manifest) Stack() string {
 		s += " + " + strings.Join(m.Databases, ", ")
 	} else if m.Database != "" {
 		s += " + " + m.Database
+	}
+	if m.ORM != "" {
+		s += " + " + m.ORM
 	}
 	return s
 }

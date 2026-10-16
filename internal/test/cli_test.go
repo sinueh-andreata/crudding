@@ -130,6 +130,22 @@ func TestCLINewListOptionsByKey(t *testing.T) {
 			args: []string{"new", "a"},
 			want: "arch/a:\n  flat\n  layered\n  modular\n  hexagonal\n  clean_arch\n",
 		},
+		{
+			args: []string{"new", "o"},
+			want: "orm/o:\n  none\n  sqlalchemy\n  gorm\n  prisma\n  typeorm\n",
+		},
+		{
+			args: []string{"new", "orm"},
+			want: "orm/o:\n  none\n  sqlalchemy\n  gorm\n  prisma\n  typeorm\n",
+		},
+		{
+			args: []string{"new", "l:go", "o"},
+			want: "orm/o:\n  none\n  gorm\n",
+		},
+		{
+			args: []string{"new", "l:python", "o"},
+			want: "orm/o:\n  none\n  sqlalchemy\n",
+		},
 	}
 
 	for _, tc := range cases {
@@ -259,6 +275,21 @@ func TestCLINewNonInteractiveValidationErrors(t *testing.T) {
 			args: []string{"new", "n:meu-app", "l:go", "f:raw", "a:flat", "extra"},
 			want: "flag desconhecida: extra",
 		},
+		{
+			name: "orm without database",
+			args: []string{"new", "n:app-err", "l:go", "f:gin", "a:hexagonal", "orm:gorm"},
+			want: "nenhum banco de dados foi selecionado",
+		},
+		{
+			name: "orm with mongo",
+			args: []string{"new", "n:app-err", "l:go", "f:gin", "a:hexagonal", "db:mongo", "orm:gorm"},
+			want: "não é suportado com banco mongo",
+		},
+		{
+			name: "unsupported orm",
+			args: []string{"new", "n:app-err", "l:go", "f:gin", "a:hexagonal", "db:postgres", "orm:hibernate"},
+			want: "ORM Go não suportado: hibernate",
+		},
 	}
 
 	for _, tc := range cases {
@@ -272,6 +303,38 @@ func TestCLINewNonInteractiveValidationErrors(t *testing.T) {
 				t.Fatalf("stderr = %q, want substring %q", stderr.String(), tc.want)
 			}
 		})
+	}
+}
+
+func TestCLINewNonInteractiveWithORM(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTemp(t, tmp)
+
+	var stdout, stderr bytes.Buffer
+	args := []string{"new", "n:go-gorm-app", "l:go", "f:gin", "a:hexagonal", "db:postgres", "orm:gorm"}
+	code := cli.Run(args, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("Run(%v) exit code = %d, stderr = %q", args, code, stderr.String())
+	}
+
+	projectDir := filepath.Join(tmp, "go-gorm-app")
+	_, m, err := manifest.Find(projectDir)
+	if err != nil {
+		t.Fatalf("manifest.Find() error = %v", err)
+	}
+	want := project.Config{
+		ProjectName:  "go-gorm-app",
+		Language:     "go",
+		Framework:    "gin",
+		Architecture: "hexagonal",
+		Database:     "postgres",
+		ORM:          "gorm",
+	}
+	if m.Config() != want {
+		t.Fatalf("manifest config = %+v, want %+v", m.Config(), want)
+	}
+	if got := m.Stack(); got != "go + gin + hexagonal + postgres + gorm" {
+		t.Fatalf("manifest stack = %q, want %q", got, "go + gin + hexagonal + postgres + gorm")
 	}
 }
 

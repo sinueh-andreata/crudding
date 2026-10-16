@@ -54,6 +54,9 @@ func printInfoReport(stdout io.Writer, root string, m manifest.Manifest) {
 	if m.Database != "" {
 		fmt.Fprintf(stdout, "Banco de dados: %s\n", m.Database)
 	}
+	if m.ORM != "" {
+		fmt.Fprintf(stdout, "ORM: %s\n", m.ORM)
+	}
 
 	fmt.Fprintf(stdout, "\nEndpoints (%d):\n", len(m.Endpoints))
 	if len(m.Endpoints) == 0 {

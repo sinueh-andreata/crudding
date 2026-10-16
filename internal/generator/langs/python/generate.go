@@ -15,6 +15,8 @@ var Frameworks = []string{"raw", "fastapi", "django", "flask"}
 
 var Architectures = []string{"flat", "layered", "modular", "hexagonal", "clean_arch"}
 
+var ORMs = []string{"sqlalchemy"}
+
 var FrameworkDependencies = map[string][]string{
 	"fastapi": {"fastapi>=0.115", "uvicorn[standard]>=0.30"},
 	"django":  {"Django>=5.1"},
@@ -132,6 +134,9 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 		case "mongo":
 			deps = append(deps, "pymongo>=4.6.0")
 		}
+	}
+	if config.ORM == "sqlalchemy" {
+		deps = append(deps, "SQLAlchemy>=2.0.0")
 	}
 	data.Dependencies = deps
 	data.EntryScript = entryScript

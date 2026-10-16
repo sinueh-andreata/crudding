@@ -446,3 +446,72 @@ func TestDemoAPI(t *testing.T) {
 }`,
 }
 
+func TestPythonSQLAlchemyGeneration(t *testing.T) {
+	for _, arch := range []string{"flat", "layered", "modular", "hexagonal", "clean_arch"} {
+		t.Run(arch, func(t *testing.T) {
+			destination := filepath.Join(t.TempDir(), "py_orm_app")
+			cfg := project.Config{
+				ProjectName:  "py-orm-app",
+				Language:     "python",
+				Framework:    "fastapi",
+				Architecture: arch,
+				Database:     "postgres",
+				ORM:          "sqlalchemy",
+			}
+
+			if err := generator.Generate(destination, cfg, templates); err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			// 1. requirements.txt deve conter SQLAlchemy e psycopg2
+			reqBytes, err := os.ReadFile(filepath.Join(destination, "requirements.txt"))
+			if err != nil {
+				t.Fatalf("read requirements.txt: %v", err)
+			}
+			reqText := string(reqBytes)
+			if !strings.Contains(reqText, "SQLAlchemy") {
+				t.Errorf("requirements.txt does not contain SQLAlchemy:\n%s", reqText)
+			}
+			if !strings.Contains(reqText, "psycopg2-binary") {
+				t.Errorf("requirements.txt does not contain psycopg2-binary:\n%s", reqText)
+			}
+
+			// 2. config.py deve conter engine e SessionLocal
+			configRel := "src/config/config.py"
+			if arch != "flat" {
+				configRel = "src/app/config/config.py"
+			}
+			configBytes, err := os.ReadFile(filepath.Join(destination, configRel))
+			if err != nil {
+				t.Fatalf("read config.py: %v", err)
+			}
+			configText := string(configBytes)
+			if !strings.Contains(configText, "create_engine") || !strings.Contains(configText, "SessionLocal") || !strings.Contains(configText, "Base = declarative_base()") {
+				t.Errorf("config.py does not contain SQLAlchemy setup:\n%s", configText)
+			}
+
+			// 3. Checar se o model contém Column e herda de Base
+			modelRel := "src/resource_model.py"
+			switch arch {
+			case "layered":
+				modelRel = "src/app/models/resource.py"
+			case "modular":
+				modelRel = "src/app/resource/models.py"
+			case "hexagonal":
+				modelRel = "src/app/domain/resource.py"
+			case "clean_arch":
+				modelRel = "src/app/domain/model/resource.py"
+			}
+			modelBytes, err := os.ReadFile(filepath.Join(destination, modelRel))
+			if err != nil {
+				t.Fatalf("read model file %s: %v", modelRel, err)
+			}
+			modelText := string(modelBytes)
+			if !strings.Contains(modelText, "class Resource(Base):") || !strings.Contains(modelText, "Column(String, primary_key=True") {
+				t.Errorf("%s does not contain SQLAlchemy model definition:\n%s", modelRel, modelText)
+			}
+		})
+	}
+}
+
+
