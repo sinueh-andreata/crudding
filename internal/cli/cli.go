@@ -17,21 +17,22 @@ var helpFlags = []string{"-h", "--help", "help"}
 type Command struct {
 	Args    string
 	Summary string
-	Run     func() error
+	Run     func(args []string, stdout, stderr io.Writer) error
 }
 
 func (c Command) label() string {
 	return strings.TrimSpace("crudding " + c.Args)
 }
 
-func (c Command) matches(input string) bool {
-	return c.Args == input
-}
-
 var commands = []Command{
 	{
 		Args:    "",
 		Summary: "gera um novo projeto (menu interativo)",
+		Run:     runNew,
+	},
+	{
+		Args:    "new",
+		Summary: "gera um novo projeto (interativo ou via name/n, lang/l, framework/f, arch/a, runtime/r)",
 		Run:     runNew,
 	},
 	{
@@ -64,27 +65,37 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	cmd, ok := findCommand(input)
+	cmd, cmdArgs, ok := findCommand(args)
 	if !ok {
-		fmt.Fprintf(stderr, "unknown command use `crudding help` or `crudding --help` or `crudding -h` for usage\n")
+		fmt.Fprintf(stderr, "comando desconhecido: %s\n\n%s", input, Usage())
 		return 2
 	}
 
-	return execute(cmd, stderr)
+	return execute(cmd, cmdArgs, stdout, stderr)
 }
 
-func findCommand(input string) (Command, bool) {
-	index := slices.IndexFunc(commands, func(cmd Command) bool {
-		return cmd.matches(input)
-	})
-	if index < 0 {
-		return Command{}, false
+func findCommand(args []string) (Command, []string, bool) {
+	for _, cmd := range commands {
+		if cmd.Args == "" {
+			continue
+		}
+		parts := strings.Fields(cmd.Args)
+		if len(args) >= len(parts) && slices.Equal(args[:len(parts)], parts) {
+			return cmd, args[len(parts):], true
+		}
 	}
-	return commands[index], true
+	if len(args) == 0 {
+		for _, cmd := range commands {
+			if cmd.Args == "" {
+				return cmd, nil, true
+			}
+		}
+	}
+	return Command{}, nil, false
 }
 
-func execute(cmd Command, stderr io.Writer) int {
-	err := cmd.Run()
+func execute(cmd Command, args []string, stdout, stderr io.Writer) int {
+	err := cmd.Run(args, stdout, stderr)
 	if err == nil || errors.Is(err, errCancelled) {
 		return 0
 	}
