@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"crudding"
@@ -12,6 +14,26 @@ import (
 	"crudding/internal/generator/common"
 	"crudding/internal/manifest"
 )
+
+// AddDBUsage gera o texto de ajuda do comando "crudding add db".
+func AddDBUsage() string {
+	var b strings.Builder
+	b.WriteString("como funciona:\n")
+	b.WriteString("  Adiciona a infraestrutura e configuração de um banco de dados ao projeto atual.\n")
+	b.WriteString("  Gera ou atualiza docker-compose.yml, .env.example, migrations/ e adiciona as\n")
+	b.WriteString("  funções de conexão e dependências necessárias (go.mod, requirements.txt ou package.json).\n")
+	b.WriteString("  - Sem argumentos (\"crudding add db\"), abre menu para escolher o banco.\n")
+	b.WriteString("  - Com argumento, adiciona o banco diretamente.\n\n")
+	b.WriteString("uso:\n")
+	b.WriteString("  crudding add db [<banco> | db:<banco> | d:<banco>]\n\n")
+	b.WriteString("bancos suportados:\n")
+	b.WriteString("  postgres, mysql, mongo\n\n")
+	b.WriteString("exemplos:\n")
+	b.WriteString("  crudding add db\n")
+	b.WriteString("  crudding add db postgres\n")
+	b.WriteString("  crudding add db d:mysql\n")
+	return b.String()
+}
 
 func printDBSummary(stdout io.Writer, db string, lang string, result common.Result) {
 	fmt.Fprintf(stdout, "\nBanco de dados %s adicionado com sucesso.\n", db)
@@ -30,9 +52,14 @@ func printDBSummary(stdout io.Writer, db string, lang string, result common.Resu
 	}
 }
 
-func parseDBArgs(args []string) (string, bool, error) {
+func parseDBArgs(args []string) (string, bool, bool, error) {
 	if len(args) == 0 {
-		return "", false, nil
+		return "", false, false, nil
+	}
+	for _, token := range args {
+		if slices.Contains(helpFlags, token) {
+			return "", false, true, nil
+		}
 	}
 	fs := flag.NewFlagSet("crudding add db", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -40,14 +67,20 @@ func parseDBArgs(args []string) (string, bool, error) {
 	fs.StringVar(&db, "db", "", "banco de dados (postgres, mysql, mongo)")
 	fs.StringVar(&db, "d", "", "banco de dados (postgres, mysql, mongo)")
 	if err := fs.Parse(args); err != nil {
-		return "", false, err
+		if errors.Is(err, flag.ErrHelp) {
+			return "", false, true, nil
+		}
+		return "", false, false, err
 	}
 	rest := fs.Args()
+	if len(rest) == 1 && slices.Contains(helpFlags, rest[0]) {
+		return "", false, true, nil
+	}
 	if db != "" && len(rest) > 0 {
-		return "", false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest, " "))
+		return "", false, false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest, " "))
 	}
 	if len(rest) > 1 {
-		return "", false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest[1:], " "))
+		return "", false, false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest[1:], " "))
 	}
 	if db == "" && len(rest) == 1 {
 		token := rest[0]
@@ -59,15 +92,19 @@ func parseDBArgs(args []string) (string, bool, error) {
 	}
 	db = strings.TrimSpace(strings.ToLower(db))
 	if err := generator.ValidateDatabase(db); err != nil {
-		return "", false, err
+		return "", false, false, err
 	}
-	return db, true, nil
+	return db, true, false, nil
 }
 
 func runAddDB(args []string, stdout, _ io.Writer) error {
-	argDB, hasArg, err := parseDBArgs(args)
+	argDB, hasArg, showHelp, err := parseDBArgs(args)
 	if err != nil {
 		return err
+	}
+	if showHelp {
+		fmt.Fprint(stdout, AddDBUsage())
+		return nil
 	}
 
 	workingDirectory, err := os.Getwd()

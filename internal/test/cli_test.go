@@ -384,7 +384,70 @@ func TestCLIAddEndpointNonInteractive(t *testing.T) {
 	if !strings.Contains(stderr.String(), "nome de endpoint inválido") {
 		t.Fatalf("stderr = %q, want invalid endpoint error", stderr.String())
 	}
+
+	// Help flags inside project
+	for _, h := range []string{"-h", "--help", "help"} {
+		stdout.Reset()
+		stderr.Reset()
+		if code := cli.Run([]string{"add", "endpoint", h}, &stdout, &stderr); code != 0 {
+			t.Fatalf("Run(add endpoint %s) exit code = %d, want 0", h, code)
+		}
+		if !strings.Contains(stdout.String(), "crudding add endpoint") {
+			t.Fatalf("stdout = %q, missing add endpoint usage", stdout.String())
+		}
+	}
 }
+
+func TestCLIAddEndpointHelp(t *testing.T) {
+	for _, arg := range []string{"-h", "--help", "help"} {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run([]string{"add", "endpoint", arg}, &stdout, &stderr)
+		if code != 0 {
+			t.Fatalf("Run(add endpoint %q) exit code = %d, want 0", arg, code)
+		}
+		if stderr.Len() != 0 {
+			t.Fatalf("Run(add endpoint %q) unexpected stderr = %q", arg, stderr.String())
+		}
+		got := stdout.String()
+		for _, section := range []string{
+			"como funciona:",
+			"uso:",
+			"crudding add endpoint",
+			"exemplos:",
+		} {
+			if !strings.Contains(got, section) {
+				t.Fatalf("Run(add endpoint %q) stdout missing %q:\n%s", arg, section, got)
+			}
+		}
+	}
+}
+
+func TestCLIAddDBHelp(t *testing.T) {
+	for _, arg := range []string{"-h", "--help", "help"} {
+		var stdout, stderr bytes.Buffer
+		code := cli.Run([]string{"add", "db", arg}, &stdout, &stderr)
+		if code != 0 {
+			t.Fatalf("Run(add db %q) exit code = %d, want 0", arg, code)
+		}
+		if stderr.Len() != 0 {
+			t.Fatalf("Run(add db %q) unexpected stderr = %q", arg, stderr.String())
+		}
+		got := stdout.String()
+		for _, section := range []string{
+			"como funciona:",
+			"uso:",
+			"crudding add db",
+			"bancos suportados:",
+			"postgres, mysql, mongo",
+			"exemplos:",
+		} {
+			if !strings.Contains(got, section) {
+				t.Fatalf("Run(add db %q) stdout missing %q:\n%s", arg, section, got)
+			}
+		}
+	}
+}
+
 
 func TestCLIRemoveEndpoint(t *testing.T) {
 	tmp := t.TempDir()

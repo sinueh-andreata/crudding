@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"crudding"
@@ -13,6 +15,23 @@ import (
 	"crudding/internal/manifest"
 	"crudding/internal/project"
 )
+
+// AddEndpointUsage gera o texto de ajuda do comando "crudding add endpoint".
+func AddEndpointUsage() string {
+	var b strings.Builder
+	b.WriteString("como funciona:\n")
+	b.WriteString("  Gera os arquivos de um novo endpoint CRUD (model, service, handler/controller,\n")
+	b.WriteString("  rotas) e registra nos pontos de extensão do projeto e no project.crud.\n")
+	b.WriteString("  - Sem argumentos (\"crudding add endpoint\"), solicita o nome interativamente.\n")
+	b.WriteString("  - Com argumento, cria o endpoint diretamente.\n\n")
+	b.WriteString("uso:\n")
+	b.WriteString("  crudding add endpoint [<nome> | name:<nome> | n:<nome>]\n\n")
+	b.WriteString("exemplos:\n")
+	b.WriteString("  crudding add endpoint\n")
+	b.WriteString("  crudding add endpoint customer\n")
+	b.WriteString("  crudding add endpoint n:invoice\n")
+	return b.String()
+}
 
 func printEndpointSummary(stdout io.Writer, name string, result common.Result) {
 	fmt.Fprintf(stdout, "\nEndpoint %s criado.\n", name)
@@ -24,23 +43,34 @@ func printEndpointSummary(stdout io.Writer, name string, result common.Result) {
 	}
 }
 
-func parseEndpointArgs(args []string) (string, bool, error) {
+func parseEndpointArgs(args []string) (string, bool, bool, error) {
 	if len(args) == 0 {
-		return "", false, nil
+		return "", false, false, nil
+	}
+	for _, token := range args {
+		if slices.Contains(helpFlags, token) {
+			return "", false, true, nil
+		}
 	}
 	fs := flag.NewFlagSet("crudding add endpoint", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	var name string
 	fs.StringVar(&name, "name", "", "nome do endpoint (snake_case)")
 	if err := fs.Parse(args); err != nil {
-		return "", false, err
+		if errors.Is(err, flag.ErrHelp) {
+			return "", false, true, nil
+		}
+		return "", false, false, err
 	}
 	rest := fs.Args()
+	if len(rest) == 1 && slices.Contains(helpFlags, rest[0]) {
+		return "", false, true, nil
+	}
 	if name != "" && len(rest) > 0 {
-		return "", false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest, " "))
+		return "", false, false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest, " "))
 	}
 	if len(rest) > 1 {
-		return "", false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest[1:], " "))
+		return "", false, false, fmt.Errorf("argumentos inesperados: %s", strings.Join(rest[1:], " "))
 	}
 	if name == "" && len(rest) == 1 {
 		token := rest[0]
@@ -52,15 +82,19 @@ func parseEndpointArgs(args []string) (string, bool, error) {
 	}
 	name = strings.TrimSpace(name)
 	if err := project.ValidateEndpointName(name); err != nil {
-		return "", false, err
+		return "", false, false, err
 	}
-	return name, true, nil
+	return name, true, false, nil
 }
 
 func runAddEndpoint(args []string, stdout, _ io.Writer) error {
-	argName, hasArg, err := parseEndpointArgs(args)
+	argName, hasArg, showHelp, err := parseEndpointArgs(args)
 	if err != nil {
 		return err
+	}
+	if showHelp {
+		fmt.Fprint(stdout, AddEndpointUsage())
+		return nil
 	}
 
 	workingDirectory, err := os.Getwd()
