@@ -174,7 +174,7 @@ func NewUsage() string {
 	var b strings.Builder
 	b.WriteString("como funciona:\n")
 	b.WriteString("  Gera a estrutura de um novo projeto CRUD no diretório atual.\n")
-	b.WriteString("  - Sem argumentos (\"crudding new\"), abre o menu interativo no terminal.\n")
+	b.WriteString("  - Para o menu interativo, execute apenas \"crudding\".\n")
 	b.WriteString("  - Com argumentos no formato chave:valor (ou abreviação c:valor), cria o projeto\n")
 	b.WriteString("    diretamente em modo não-interativo.\n")
 	b.WriteString("  - Passando apenas o nome ou a primeira letra da flag (ex.: \"crudding new l\" ou\n")
@@ -348,24 +348,7 @@ func printNewSummary(stdout io.Writer, projectDirectory string, config project.C
 	}
 }
 
-func runNew(args []string, stdout, _ io.Writer) error {
-	var (
-		config project.Config
-		info   string
-		err    error
-	)
-	if len(args) == 0 {
-		config, err = promptConfig(stdout)
-	} else {
-		config, info, err = parseNewArgs(args)
-	}
-	if err != nil {
-		return err
-	}
-	if info != "" {
-		fmt.Fprint(stdout, info)
-		return nil
-	}
+func generateProject(config project.Config, stdout io.Writer) error {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return err
@@ -377,3 +360,27 @@ func runNew(args []string, stdout, _ io.Writer) error {
 	printNewSummary(stdout, projectDirectory, config)
 	return nil
 }
+
+func runInteractive(_ []string, stdout, _ io.Writer) error {
+	config, err := promptConfig(stdout)
+	if err != nil {
+		return err
+	}
+	return generateProject(config, stdout)
+}
+
+func runNew(args []string, stdout, _ io.Writer) error {
+	if len(args) == 0 {
+		return fmt.Errorf("nenhum argumento informado; execute \"crudding new -h\" para ver o uso")
+	}
+	config, info, err := parseNewArgs(args)
+	if err != nil {
+		return err
+	}
+	if info != "" {
+		fmt.Fprint(stdout, info)
+		return nil
+	}
+	return generateProject(config, stdout)
+}
+

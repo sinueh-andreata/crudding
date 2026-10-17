@@ -28,11 +28,11 @@ var commands = []Command{
 	{
 		Args:    "",
 		Summary: "gera um novo projeto (menu interativo)",
-		Run:     runNew,
+		Run:     runInteractive,
 	},
 	{
 		Args:    "new",
-		Summary: "gera um novo projeto (interativo ou via name/n, lang/l, framework/f, arch/a, runtime/r)",
+		Summary: "gera um novo projeto via flags (name/n, lang/l, framework/f, arch/a, runtime/r)",
 		Run:     runNew,
 	},
 	{

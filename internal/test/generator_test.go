@@ -34,7 +34,7 @@ var requiredFiles = map[string]map[string][]string{
 		"clean_arch": {"src/frameworks/main", "src/frameworks/http/server", "src/entities/order", "src/use-cases/create-order", "src/adapters/controllers/order-controller"},
 	},
 	"python": {
-		"flat":       {"pyproject.toml", "setup.py", "src/resource_controller.py", "src/resource_service.py", "src/resource_model.py", "src/main.py", "src/config/config.py"},
+		"flat":       {"setup.py", "src/resource_controller.py", "src/resource_service.py", "src/resource_model.py", "src/main.py", "src/config/config.py"},
 		"layered":    {"src/app/main.py", "src/app/controllers/resource_controller.py", "src/app/services/resource_service.py", "src/app/models/resource.py", "src/app/config/config.py"},
 		"modular":    {"src/app/main.py", "src/app/resource/controller.py", "src/app/resource/service.py", "src/app/resource/models.py", "src/app/config/config.py"},
 		"hexagonal":  {"src/app/main.py", "src/app/routers/resource_controller.py", "src/app/application/resource_service.py", "src/app/ports/resource_repository.py", "src/app/infrastructure/resource_repository.py", "src/app/domain/resource.py", "src/app/config/config.py"},
@@ -166,7 +166,7 @@ func TestGenerateAllTemplateCombinations(t *testing.T) {
 					t.Errorf("tsconfig.json presente = %v para runtime %s", hasTsconfig, config.Runtime)
 				}
 			case "python":
-				assertFilesExist(t, destination, "requirements.txt", "pyproject.toml")
+				assertFilesExist(t, destination, "requirements.txt")
 			}
 
 			if config.Language != "go" && !strings.Contains(string(readme), "- Arquitetura: "+config.Architecture) {

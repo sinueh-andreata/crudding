@@ -251,6 +251,11 @@ func TestCLINewNonInteractiveValidationErrors(t *testing.T) {
 		want string
 	}{
 		{
+			name: "new without args requires help",
+			args: []string{"new"},
+			want: "crudding new -h",
+		},
+		{
 			name: "missing flags",
 			args: []string{"new", "name:meu-app", "lang:go"},
 			want: "flags obrigatórias ausentes: framework/f, arch/a",

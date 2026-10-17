@@ -69,7 +69,6 @@ func Plan(destination string, config project.Config) (common.Plan, error) {
 		{TemplatePath: path.Join(archDir, "README.md.tmpl"), OutputPath: "README.md"},
 		{TemplatePath: path.Join(commonDir, "requirements.txt.tmpl"), OutputPath: "requirements.txt"},
 		{TemplatePath: path.Join(commonDir, ".gitignore.tmpl"), OutputPath: ".gitignore"},
-		{TemplatePath: path.Join(commonDir, "pyproject.toml.tmpl"), OutputPath: "pyproject.toml"},
 		{TemplatePath: path.Join(commonDir, "config.py.tmpl"), OutputPath: configOutput},
 		{TemplatePath: path.Join(fwDir, "main.py.tmpl"), OutputPath: entryScript},
 	}
